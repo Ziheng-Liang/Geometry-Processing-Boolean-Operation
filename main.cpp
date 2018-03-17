@@ -3,9 +3,11 @@
 #include <Eigen/Sparse>
 #include <iostream> 
 #include <boost/multiprecision/cpp_int.hpp> 
+#include "boost_include.h"
 int main()
 {
   using namespace boost::multiprecision;
+  using namespace igl::bol;
   Eigen::MatrixXd V(4,2);
   V<<0,0,
      1,0,
@@ -19,6 +21,14 @@ int main()
   std::cout<<"Hello, mesh: "<<std::endl<<L*V<<std::endl;
   cpp_rational v = 0.5;
   std::cout<< v << std::endl;
+  VectorXr vt(3);
+  vt(0) = 0.5;
+  vt(1) = 0.5;
+  vt(2) = 0.5;
+  std::cout << vt << std::endl;
 
-  return 0;
+  MatrixXr vnew = V.cast<cpp_rational> ();
+
+  std::cout << vnew << std::endl;
+  return 0; 
 }

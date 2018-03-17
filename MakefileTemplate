@@ -11,7 +11,7 @@ LDFLAGS = -lpthread
 %.o : %.cpp
 	$(CC) $(CFLAGS) -c $< -o $@ $(LDFLAGS)
  
-main: main.cpp
+main: main.cpp boost_include.h
 	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 	
 
