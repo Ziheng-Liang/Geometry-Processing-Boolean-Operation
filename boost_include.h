@@ -1,7 +1,8 @@
-#include <Eigen/Core>
-#include <boost/multiprecision/cpp_int.hpp> 
 #ifndef IGL_BOL_BOOST_INCLUDE_H
 #define IGL_BOL_BOOST_INCLUDE_H
+
+#include <Eigen/Core>
+#include <boost/multiprecision/cpp_int.hpp> 
 
 namespace igl {
 	namespace bol{
