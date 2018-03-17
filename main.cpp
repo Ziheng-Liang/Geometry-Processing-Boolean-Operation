@@ -27,5 +27,8 @@ int main()
   vt(2) = 0.5;
   std::cout << vt << std::endl;
 
-  return 0;
+  MatrixXr vnew = V.cast<cpp_rational> ();
+
+  std::cout << vnew << std::endl;
+  return 0; 
 }
