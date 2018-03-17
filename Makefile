@@ -1,5 +1,10 @@
 CC = g++
-INCLUDE = -I ~/eigen3/ -I ~/libigl/include/
+EIGENPATH = ~/lib/
+LIBIGLPATH = ~/lib/libigl/include/
+BOOSTPATH = ~/lib/
+
+
+INCLUDE = -I $(EIGENPATH) -I $(LIBIGLPATH) -I $(BOOSTPATH)
 CFLAGS = -std=c++11 $(INCLUDE)
 LDFLAGS = -lpthread
 
