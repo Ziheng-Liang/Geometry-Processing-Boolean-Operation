@@ -6,11 +6,13 @@
 
 namespace igl {
 	namespace bol{
-		typedef Eigen::Matrix<boost::multiprecision::cpp_rational,Eigen::Dynamic,Eigen::Dynamic> MatrixXr;
-		typedef Eigen::Matrix<boost::multiprecision::cpp_rational,Eigen::Dynamic,3> MatrixX3r;
-		typedef Eigen::Matrix<boost::multiprecision::cpp_rational,Eigen::Dynamic,1> VectorXr;
-		typedef Eigen::Matrix<boost::multiprecision::cpp_rational, 1, Eigen::Dynamic> RowVectorXr;
-
+		typedef boost::multiprecision::cpp_rational rat;
+		typedef Eigen::Matrix<rat,Eigen::Dynamic,Eigen::Dynamic> MatrixXr;
+		typedef Eigen::Matrix<rat,Eigen::Dynamic,3> MatrixX3r; //list of triangle
+		typedef Eigen::Matrix<rat,3,3> Matrix33r; //This can a triangle
+		typedef Eigen::Matrix<rat,Eigen::Dynamic,1> VectorXr;
+		typedef Eigen::Matrix<rat, 1, Eigen::Dynamic> RowVectorXr;
+		typedef Eigen::Matrix<rat, 1, 3> RowVector3r; // This can be a point
 	}
 
 
