@@ -3,7 +3,8 @@
 
 #include <Eigen/Core>
 #include <boost/multiprecision/cpp_int.hpp> 
-
+#include <Eigen/LU>
+#include <Eigen/Dense>
 namespace igl {
 	namespace bol{
 		typedef boost::multiprecision::cpp_rational rat;
@@ -17,5 +18,28 @@ namespace igl {
 
 
 }
+
+namespace Eigen{
+	template <> struct NumTraits<igl::bol::rat>: Eigen::GenericNumTraits<igl::bol::rat>{
+	typedef igl::bol::rat Real;
+    typedef igl::bol::rat NonInteger;
+    typedef igl::bol::rat Nested;
+    typedef igl::bol::rat Literal;
+
+     enum {
+      IsInteger = 0,
+      IsSigned = 1,
+      IsComplex = 0,
+      RequireInitialization = 1,
+      ReadCost = 6,
+      AddCost = 150,
+      MulCost = 100
+    	};
+	};
+
+}
+
+
+
 
 #endif
