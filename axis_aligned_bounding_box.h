@@ -1,5 +1,6 @@
 #include <Eigen/Core>
-#include <boostinclude>
+#include "boost_include.h"
+#include <algorithm>
 
 namespace igl {
 	namespace bol {

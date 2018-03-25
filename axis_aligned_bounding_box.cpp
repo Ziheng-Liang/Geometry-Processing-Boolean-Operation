@@ -1,5 +1,4 @@
 #include "axis_aligned_boudning_box.h"
-#include <algorithm>
 
 void axis_aligned_boudning_box(MatrixXr V, Eigen::MatrixXi F, MatrixXr AABB) {
 	using namespace Eigen;
