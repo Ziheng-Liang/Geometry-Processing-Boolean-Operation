@@ -1,68 +1,274 @@
 #include "constrained_delaunay_triangulation.h"
 #include <igl/sort.h>
+#include <igl/slice.h>
+#include <igl/colon.h>
+#include <math.h> 
 
-void contruct_tree(MatrixXr V, Node* node) {
+using namespace igl::bol;
+using namespace Eigen;
+using namespace std;
+
+void igl::bol::contruct_tree(MatrixXd V, Node* node) {
 	using namespace std;
-	using namespace eigen;
+	using namespace Eigen;
 	assert (V.rows() >= 3);
-	RowVectorXr p1 = V.rows(0);
-	RowVectorXr p2 = V.rows(1);
-	RowVectorXr p3 = V.rows(2);
-	RowVectorXr up = (p2-p1).corss(p3-p1);
-	RowVectorXr x = (p2-p2);
-	RowVectorXr y = x.corss(up);
-	MatrixXr Vn = V.rowwise() - p1;
-	MatrixXr A = MatrixXr::Zero(2, 3);
+	RowVector3d p1 = V.row(0);
+	RowVector3d p2 = V.row(1);
+	RowVector3d p3 = V.row(2);
+	RowVector3d up = (p2-p1).cross(p3-p1);
+	RowVector3d x = (p2-p2);
+	RowVector3d y = x.cross(up);
+	MatrixXd Vn = V.rowwise() - p1;
+	MatrixXd A = MatrixXd::Zero(2, 3);
 	A << x(0), x(1), x(2), y(0), y(1), y(2);
-	MatrixXr piA = A.transpose()*(A * A.transpose()).inverse();
-	MatrixXr projectV = V * piA;
-	MatrixXr temp;
+	MatrixXd piA = A.transpose()*(A * A.transpose()).inverse();
+	MatrixXd projectV = V * piA;
+	MatrixXd temp;
 	MatrixXi xindex;
-	igl::sort(projectV, 1, temp, xindex);
+	igl::sort(projectV, 1, true, temp, xindex);
 	subdivide(xindex, node);
 }
 
-void constrained_delaunay_triangulation(MatrixXr V, Eigen::MatrixXi C) {
-	Node root = new Node();
+void igl::bol::constrained_delaunay_triangulation(MatrixXd V, Eigen::MatrixXi C, Eigen::MatrixXi F) {
+	Node* root = new Node();
 	contruct_tree(V, root);
 
 }
 
-void subdivide(RowVectorXi index, Node* node) {
-	if (index.rows()) <= 3 {
+void igl::bol::subdivide(Eigen::RowVectorXi index, Node* node) {
+	if ((index.rows()) <= 3) {
 		return;
 	}
-	node.index = index;
+	node->index = index;
 	int n = index.rows();
-	Node left_node = new Node();
+	node->size = n;
+	Node* left_node = new Node();
 	node->left = left_node;
 	subdivide(index.head(n/2), left_node);
 
-	Node right_node = new Node();
+	Node* right_node = new Node();
 	node->right = right_node;
-	subdivide(index.tail(n-n/2), end, right_node);
+	subdivide(index.tail(n-n/2), right_node);
 }
 
-void build_edges(MatrixXr V, Node* node, std::Vector<std::tuple<int,int>> edge_list) {
+
+void igl::bol::build_edges(MatrixXd V, Node* node) {
 	if (node->left) {
-		build_edges(V, node->left, edge_list);
+		assert(node->right);
+		build_edges(V, node->left);
 	}
 	if (node->right) {
-		build_edges(V, node->right, edge_list);
+		assert(node->left);
+		build_edges(V, node->right);
+	}
+	if (!node->left && !node->right) {
+		Polygon* polygon = new Polygon();
+		polygon->size = node->size;
+		VectorXi edges = VectorXi::Zero(node->size, 2);
+		for (int i = 0; i < node->size; i++) {
+			edges(i, 0) = node->index(i);
+			edges(i, 1) = node->index((i+1) % node->size);
+		}
+		polygon->edges = edges;
+		node->edges = edges;
+		node->polygons.push_back(polygon);
+	}
+	else {
+		MatrixXd left_sub_V;
+		MatrixXd right_sub_V;
+		VectorXi cols;
+		igl::colon(0,V.cols()-1, cols);
+		igl::slice(V,node->left->index,cols,left_sub_V);
+		igl::slice(V,node->right->index,cols,right_sub_V);
+		MatrixXi left_vert_index;
+		MatrixXi right_vert_index;
+		MatrixXd temp;
+		igl::sort(left_sub_V, 1, true, temp, left_vert_index);
+		igl::sort(right_sub_V, 1, true, temp, right_vert_index);
+
+		// find the base LR-edge
+		int l_vidx = 0, r_vidx = 0;
+		while (l_vidx < left_vert_index.rows() && r_vidx < right_vert_index.rows()) {
+			RowVectorXd p1 = left_sub_V.row(left_vert_index(l_vidx,0));
+			RowVectorXd p2 = right_sub_V.row(right_vert_index(r_vidx,0));
+			bool has_intersection = false;
+			for (int i = 0; i < node->left->index.rows(); i++) {
+				RowVectorXd p3 = V.row(node->left->edges(i, 0));
+				RowVectorXd p4 = V.row(node->left->edges(i, 1));
+				if (intersect(p1, p2, p3, p4)) {
+					l_vidx ++;
+					has_intersection = true;
+					break;
+				}
+			}
+			for (int i = 0; i < node->right->index.rows(); i++) {
+				RowVectorXd p3 = V.row(node->right->edges(i, 0));
+				RowVectorXd p4 = V.row(node->right->edges(i, 1));
+				if (intersect(p1, p2, p3, p4)) {
+					r_vidx ++;
+					has_intersection = true;
+					break;
+				}
+			}
+			if (!has_intersection) {
+				break;
+			}
+		}
+		MatrixXi new_edges;
+		new_edges.resize(new_edges.rows()+1, 2);
+		new_edges.row(new_edges.rows() - 1) << node->left->index(l_vidx), node->right->index(r_vidx);
+
+		int l_candidate_final = -1;
+		int r_candidate_final = -1;
+		int l_ridx = node->left->index(l_vidx);
+		int r_ridx = node->right->index(r_vidx);
+
+		while (l_candidate_final != -1 || r_candidate_final != -1) {
+			l_candidate_final = -1;
+			r_candidate_final = -1;
+			// find candidates from both side
+			vector<tuple<int,int>> r_candidate;
+			vector<tuple<int,int>> l_candidate;
+			for (int i = 0; i < node->right->edges.rows(); i++) {
+				int other;
+				if (node->right->edges(i, 0) == r_ridx){
+					other = node->right->edges(i, 1);
+				}
+				else if (node->right->edges(i, 1) == r_ridx) {
+					other = node->right->edges(i, 0);
+				}
+				double a = angle(V.row(r_ridx), V.row(other), V.row(l_ridx));
+				bool added = false;
+				for (int j = 0; j < r_candidate.size(); j++) {
+					if (a < get<1>(r_candidate.at(j))){
+						r_candidate.insert(r_candidate.begin() + j, make_tuple(other, a));
+						added = true;
+						break;
+					}
+				}
+				if (!added) {
+					r_candidate.push_back(make_tuple(other, a));
+				}
+			}
+
+			for (int i = 0; i < node->left->edges.rows(); i++) {
+				int other;
+				if (node->left->edges(i, 0) == l_ridx){
+					other = node->left->edges(i, 1);
+				}
+				else if (node->left->edges(i, 1) == l_ridx) {
+					other = node->left->edges(i, 0);
+				}
+				double a = angle(V.row(l_ridx), V.row(other), V.row(r_ridx));
+				bool added = false;
+				for (int j = 0; j < l_candidate.size(); j++) {
+					if (a < get<1>(l_candidate.at(j))){
+						l_candidate.insert(l_candidate.begin() + j, make_tuple(other, a));
+						added = true;
+						break;
+					}
+				}
+				if (!added) {
+					l_candidate.push_back(make_tuple(other, a));
+				}
+			}
+
+			// find final candidate from both side
+			RowVectorXd p_left = V.row(l_ridx);
+			RowVectorXd p_right = V.row(r_ridx);
+			RowVectorXd center;
+			int l_candidate_final = -1;
+			int r_candidate_final = -1;
+			for (int i = 0; i < r_candidate.size() - 1; i++) {
+				if (get<1>(r_candidate.at(i)) > 3.1415926535) {
+					break;
+				}
+				get_circle_center(p_left, p_right, V.row(get<0>(r_candidate.at(i))), center);
+				if ((p_left-center).dot(p_left-center) < (V.row(get<0>(r_candidate.at(i+1))) - center)
+					.dot(V.row(get<0>(r_candidate.at(i+1))))) {
+					r_candidate_final = get<0>(r_candidate.at(i));
+					break;
+				}
+				else {
+					// remove edges from polygon
+					// remove edegs from node
+				}
+			}
+
+			for (int i = 0; i < l_candidate.size() - 1; i++) {
+				if (get<1>(l_candidate.at(i)) > 3.1415926535) {
+					break;
+				}
+				get_circle_center(p_left, p_right, V.row(get<0>(l_candidate.at(i))), center);
+				if ((p_left-center).dot(p_left-center) < (V.row(get<0>(r_candidate.at(i+1))) - center)
+					.dot(V.row(get<0>(r_candidate.at(i+1))))) {
+					r_candidate_final = get<0>(l_candidate.at(i));
+					break;
+				}
+				else {
+					continue;
+					// remove edges from polygon
+					// remove edegs from node
+				}
+			}
+
+			// final step
+			if (l_candidate_final == -1 && r_candidate_final != -1) {
+				r_ridx = r_candidate_final;
+			}
+			else if (l_candidate_final != -1 && r_candidate_final == -1) {
+				l_ridx = l_candidate_final;
+			}
+			else if (l_candidate_final != -1 && r_candidate_final != -1) {
+				get_circle_center(p_left, p_right, V.row(l_candidate_final), center);
+				if ((p_left-center).dot(p_left-center) < (V.row(r_candidate_final) - center)
+					.dot(V.row(r_candidate_final) - center)) {
+					l_ridx = l_candidate_final;
+				}
+				else {
+					r_ridx = r_candidate_final;
+				}
+			}
+			else {
+				break;
+			}
+			new_edges.resize(new_edges.rows()+1, 2);
+			new_edges.row(new_edges.rows() - 1) << l_ridx, r_ridx;
+		}
+		// merge ll_edges, lr_edges, rr_edges
 	}
 
-void get_circle_center(RowVectorXr p1, RowVectorXr p2, RowVectorXr p3, RowVectorXr center) {
-	RowVectorXr pa = (p1 + p2)/2;
-	RowVectorXr pb = (p2 + p3)/2;
-	RowVectorXr up = (p1-p2).cross(p1-p3);
-	RowVectorXr pc = up.corss(p1-p2);
-	RowVectorXr pd = up.corss(p2-p3);
+}
+
+
+// need to determine clockwise angle or counter-clockwise angle
+double igl::bol::angle(RowVectorXd p1, RowVectorXd p2, RowVectorXd p3) {
+	Eigen::RowVectorXd p1d = p1;
+	Eigen::RowVectorXd p2d = p3;
+	Eigen::RowVectorXd p3d = p1;
+	return acos((p2d - p1d).dot(p3d - p1d) / ((p2d - p1d).norm() * (p3d - p1d).norm()));
+}
+
+
+
+bool igl::bol::intersect(RowVector3d p1, RowVector3d p2, RowVector3d p3, RowVector3d p4) {
+	RowVector3d v1 = p2 - p1;
+	RowVector3d v2 = p4 - p3;
+	return (v1.cross(v2)).dot(p3 - p1) == 0;
+}
+
+void igl::bol::get_circle_center(RowVector3d p1, RowVector3d p2, RowVector3d p3, RowVector3d center) {
+	RowVector3d a = (p1 + p2)/2;
+	RowVector3d b = (p2 + p3)/2;
+	RowVector3d up = (p1-p2).cross(p1-p3);
+	RowVector3d c = up.cross(p1-p2);
+	RowVector3d d = up.cross(p2-p3);
 	double m = (dmnop(a,c,d,c)*dmnop(d,c,b,a)-dmnop(a,c,b,c)*dmnop(d,c,d,c)) / 
 			   (dmnop(b,a,b,a)*dmnop(d,c,d,c)-dmnop(d,c,b,a)*dmnop(d,c,b,a));
 	center = p1 + m*(p2-p1);
 }
 
-double dmnop(RowVectorXr m, RowVectorXr n, RowVectorXr o, RowVectorXr p){
+double igl::bol::dmnop(RowVector3d m, RowVector3d n, RowVector3d o, RowVector3d p){
 	//replace with rational later
 	return (m - n).dot(o - p);
 }

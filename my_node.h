@@ -1,13 +1,22 @@
+#include "polygon.h"
+#include <Eigen/Dense>
+
+#ifndef IGL_BOL_Node_H
+#define IGL_BOL_Node_H
+
 namespace igl
 {
     namespace bol
     {
         struct Node {
-            int start;
-            int end;
-            
-            Node* Left;
-            Node* Right; 
+            Node* left;
+            Node* right; 
+            int size;
+            Eigen::RowVectorXi index;
+            Eigen::MatrixXi edges;
+            std::vector<Polygon*> polygons;
         };
     }
 }
+
+#endif
