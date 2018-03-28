@@ -67,6 +67,107 @@ static void find_point_from_two_plane(const RowVector3r & n1, const rat & d1,
 }
 
 
+//Check whether a point lies between two point.
+//Precondition, 3 points are colinear. b != a
+//Using a bounding box technique to check, much efficient.
+//return if it is inside
+static bool p_lies_ls(const RowVector3r &p, const RowVector3r &a, const RowVector3r & b){
+	rat min_coord[3];
+	min_coord[0] = a(0,0);
+	min_coord[1] = a(0,1);
+	min_coord[2] = a(0,2);
+
+	rat max_coord[3];
+	max_coord[0] = a(0,0);
+	max_coord[1] = a(0,1);
+	max_coord[2] = a(0,2);
+
+	for (int i = 0; i < 3; i++){
+		if (b(0, i) < min_coord[i]) min_coord[i] = b(0, i);
+		if (b(0, i) > max_coord[i]) max_coord[i] = b(0, i);
+	}
+
+	for (int i = 0; i < 3; i++){
+		if (p(0, i) < min_coord[i] || p(0,i) > max_coord[i]) return false; 
+	}
+	return 0;
+
+}
+
+//Find the intersection of two line segment a0-a1 and b0-b1
+//Precondition: two line segment coplanar, a0, a1 not the same point, b0 b1 not the same point
+static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const RowVector3r &a1, 
+	const RowVector3r &b0, const RowVector3r &b1, RowVector3r & p){
+	assert(!(a0.array() == a1.array()).all());
+	assert(!(b0.array() == b1.array()).all());
+	
+	std::vector<RowVector3r> return_v;
+	//two lines can be paralle
+	
+	RowVector3r da = a1 - a0;
+	RowVector3r db = b1 - b0;
+
+	RowVector3r cdadb = da.cross(db);
+	if ((cdadb.array() == 0).all() ){ //da cross db = 0, da db are paralell
+		RowVector3r dc = a1 - b0;
+		RowVector3r cdcdb = dc.cross(db);
+		if ((cdcdb.array() == 0).all()){ //if they are collinear
+			//We have 4 case
+			bool b0_ina = p_lies_ls(b0, a0, a1);
+			bool b1_ina = p_lies_ls(b1, a0, a1);
+			//case 1: one point in b lies in a0-a1. intersection is b-a
+			//case 2: two point in b lies in a0-a1, intersection is b0b1
+			//case 3: 0 point in b lies in a0-a1, 
+				//subcase 1: 0 point of a lies in b0-b1, no intersection
+				//subcase 2: 2 points of a lies in b0-b1, intersection is a0a1
+			if (b0_ina && !b1_ina){
+				rat dotb1b0 = (a1 - a0).dot(b1 - a0);
+				if (dotb1b0 > 0){		//a0-b0-a1-b1//
+					return_v.push_back(b0);
+					return_v.push_back(a1);
+					return return_v;
+				} else if (dotb1b0 < 0){ // b1-a0-b0-a1//
+					return_v.push_back(a0);
+					return_v.push_back(b0);
+					return return_v;
+				}
+
+			} else if (!b0_ina && b1_ina){
+				rat dotb1b0 = (a1-a0).dot(b0 - a0);
+				if (dotb1b0 > 0){ //a0-b1-a1-b0
+					return_v.push_back(b1);
+					return_v.push_back(a1);
+					return return_v;
+				} else if (dotb1b0 < 0){ //b0-a0-b1-a1
+					return_v.push_back(a0);
+					return_v.push_back(b1);
+					return return_v;
+				}
+
+			} else if (b0_ina && b1_ina){ // intersection is b0b1
+				return_v.push_back(b0);
+				return_v.push_back(b1);
+				return return_v;
+			} else if (!b0_ina && !b1_ina){
+				bool a0_inb = p_lies_ls(a0, b0, b1);
+				if (a0_inb){ //intersection is a0a1
+					return_v.push_back(a0);
+					return_v.push_back(a1);
+					return return_v;
+				} else { // no intersection
+					return return_v;
+				}
+			} 
+		} else { //parallel but not colinear, then they should not intersect
+			return return_v;
+		}
+	} else {
+
+	}
+
+}
+
+
 //Find the itersection of two lines
 //Precondition: two lines coplanar
 static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1, 
