@@ -228,6 +228,7 @@ static void solve2x2(rat a0, rat a1, rat a2, rat a3, rat b1, rat b2){
 }
 
 
+
 //Find the t value that cooresponds a poing on line.
 //Precondition: p is on the line, dicretion d is non zero
 static rat point_on_line(const RowVector3r & p, const RowVector3r & x, const RowVector3r &d){
@@ -235,6 +236,43 @@ static rat point_on_line(const RowVector3r & p, const RowVector3r & x, const Row
 	for (int i = 0; i < 3; i++){
 		if (d(0,i) != 0) return v(0,i)/d(0,i);
 	}
+}
+
+
+//Return the intersecting line point in order. so that every consecutive pair of points are the intersecting line segments
+static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, const Matrix33r & B){
+	//This is quite complicated:
+	//The intersection test is symmetric, meaning: intersect(A,B) = intersect(B,A)
+	//Case 1: none of B vertex lies in A and none of A vertex lies in B
+		//sub case 1: 3 edge from B intersect A	
+			//Star of David! https://en.wikipedia.org/wiki/Star_of_David
+			//hexagon!
+		//sub case 2: 2 edge from B intersect A
+			//quadrilateral
+		//sub case 3: 0 edge from B intersect A
+			//no intersection
+
+	//Case 2: else if some vertex of A lies in B
+		//sub case 1:  1 of A vertex lies in B
+			//sub sub case 1: 2 edge from A intersect same edge on B
+				//A triangle 
+			//sub sub case 2: 2 edge from A intersect different edge on B
+				//sub sub sub case 1 the other edge has no intersection to B
+					//quadrilateral or pentagon
+				//sub sub sub case 1 the other edge has intersection to B
+					//quadrilateral or pentagon (depends whether intersection are the same point)
+		//sub case 2: 2 of A vertex lies in B
+			//sub sub case 1: 2 edge from A intersect same edge on B
+				//quadrilateral
+			//sub sub case 2: 2 edge from A intersect different edge on B
+				//pentagon
+		//sub case 3: 3 of A vertex lies in B
+			//Triangle A
+	//Case 3: else if some vertex B lies in A
+		//Do the same check for B
+
+
+
 }
 
 //A helper: Find the intersection of a triangle touches a plane and a line
