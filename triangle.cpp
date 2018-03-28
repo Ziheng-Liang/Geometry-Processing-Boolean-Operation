@@ -94,6 +94,46 @@ static bool p_lies_ls(const RowVector3r &p, const RowVector3r &a, const RowVecto
 
 }
 
+//Find the itersection of two lines
+//Precondition: two lines coplanar
+static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1, 
+	const RowVector3r &x2, const RowVector3r &d2, RowVector3r & p){
+	//Line 1: = x1 + t * d1;
+	//Line 2: = x2 + s * d2
+	//Solve this linear equation (over determined)
+	//We know its on the same plane before hand, therefore we just need two axis
+	std::cout << "l1: " << d1 << " x1: " << x1 << std::endl;
+	std::cout << "l2: " << d2 << " x2: " << x2 << std::endl; 
+
+	for (int i = 0; i < 3; i++){
+		int a0 = i;
+		int a1 = (i+1)%3;
+		int a2 = (i+2)%3;
+		if (d1(a0) * (-d2(a1)) - d1(a0) * (-d2(a1)) != 0) { //if it is invertible
+			MatrixXr left;
+			left.resize(2,2);
+			left(0,0) = d1(0,a0);
+			left(0,1) = - d2(0,a0);
+			left(1,0) = d1(0,a1);
+			left(1,1) = - d2(0,a1);
+			VectorXr right;
+			right.resize(2,1);
+			right(0,0) = x2(0,a0) - x1(0,a0);
+			right(1,0) = x2(0,a1) - x1(0,a1);
+			std::cout << "KK" << std::endl;
+			auto ts = left.inverse() * right;
+			auto t = ts(0,0);
+			p = x1 + t * d1;
+			std::cout << "K" << std::endl;
+
+		}
+
+
+	}
+
+}
+
+
 //Find the intersection of two line segment a0-a1 and b0-b1
 //Precondition: two line segment coplanar, a0, a1 not the same point, b0 b1 not the same point
 static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const RowVector3r &a1, 
@@ -161,51 +201,24 @@ static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const 
 		} else { //parallel but not colinear, then they should not intersect
 			return return_v;
 		}
-	} else {
-
-	}
-
-}
-
-
-//Find the itersection of two lines
-//Precondition: two lines coplanar
-static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1, 
-	const RowVector3r &x2, const RowVector3r &d2, RowVector3r & p){
-	//Line 1: = x1 + t * d1;
-	//Line 2: = x2 + s * d2
-	//Solve this linear equation (over determined)
-	//We know its on the same plane before hand, therefore we just need two axis
-	std::cout << "l1: " << d1 << " x1: " << x1 << std::endl;
-	std::cout << "l2: " << d2 << " x2: " << x2 << std::endl; 
-
-	for (int i = 0; i < 3; i++){
-		int a0 = i;
-		int a1 = (i+1)%3;
-		int a2 = (i+2)%3;
-		if (d1(a0) * (-d2(a1)) - d1(a0) * (-d2(a1)) != 0) { //if it is invertible
-			MatrixXr left;
-			left.resize(2,2);
-			left(0,0) = d1(0,a0);
-			left(0,1) = - d2(0,a0);
-			left(1,0) = d1(0,a1);
-			left(1,1) = - d2(0,a1);
-			VectorXr right;
-			right.resize(2,1);
-			right(0,0) = x2(0,a0) - x1(0,a0);
-			right(1,0) = x2(0,a1) - x1(0,a1);
-			std::cout << "KK" << std::endl;
-			auto ts = left.inverse() * right;
-			auto t = ts(0,0);
-			p = x1 + t * d1;
-			std::cout << "K" << std::endl;
-
+	} else { // if they are not parallel. find the intersection, and check if the point is inside of two line segment
+		RowVector3r intersect_point; 
+		l2l_intersection(a0, da, b0, db, intersect_point);
+		bool p_ina = p_lies_ls(intersect_point, a0, a1);
+		bool p_inb = p_lies_ls(intersect_point, b0, b1);
+		if (p_ina && p_inb){
+			return_v.push_back(intersect_point);
+			return return_v;
+		} else {
+			return return_v;
 		}
-
-
 	}
-
+	//Here should have capture all the cases.
+	assert(false);
 }
+
+
+
 
 
 
