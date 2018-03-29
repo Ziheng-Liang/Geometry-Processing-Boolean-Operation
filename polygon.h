@@ -41,27 +41,27 @@ namespace igl
                 if (i < idx1) {
                     a->adjacent_polygon.push_back(ab->adjacent_polygon.at(i));
                     a->adjacent_index.push_back(i);
-                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index(i)) = a;
+                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index.at(i)) = a;
                 }
                 if (i == idx1) {
                     a->adjacent_polygon.push_back(b);
                     a->adjacent_index.push_back(i);
-                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index(i)) = a;
+                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index.at(i)) = a;
                 }
                 if (i >= idx1 && i < idx2) {
                     b->adjacent_polygon.push_back(ab->adjacent_polygon.at(i));
                     b->adjacent_index.push_back(i);
-                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index(i)) = b;
+                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index.at(i)) = b;
                 }
                 if (i == idx2) {
                     b->adjacent_polygon.push_back(a);
                     b->adjacent_index.push_back(i);
-                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index(i)) = b;
+                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index.at(i)) = b;
                 }
                 if (i >= idx2) {
                     a->adjacent_polygon.push_back(ab->adjacent_polygon.at(i));
                     a->adjacent_index.push_back(i);
-                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index(i)) = a;
+                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index.at(i)) = a;
                 }
             }
         }
@@ -113,14 +113,14 @@ namespace igl
             }
             return -1;
         }
-        bool exist_edges(Polygon* p, int i, int j) {
+        int exist_edges(Polygon* p, int i, int j) {
             for (int k = 0; k < p->size - 1; k++) {
                 if ((p->vertex(k) == i && p->vertex(k+1) == j) ||
                     (p->vertex(k) == j && p->vertex(k+1) == i)) {
-                    return true;
+                    return i;
                 }
             }
-            return false;
+            return -1;
         }
     }
 }

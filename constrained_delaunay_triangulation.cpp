@@ -8,9 +8,21 @@ using namespace igl::bol;
 using namespace Eigen;
 using namespace std;
 
+void igl::bol::constrained_delaunay_triangulation(Eigen::MatrixXd V, Eigen::MatrixXi C, Eigen::MatrixXi F) {
+	Node* root = new Node();
+	MatrixXd projectV;
+	contruct_tree(V, root, projectV);
+	delaunay_triangulation(projectV, root);
+	add_constrained(projectV, C, root);
+	F = Eigen::MatrixXi::Zero(root->polygons.size(), 3);
+	for (int i = 0; i < F.rows(); i++) {
+		F(i, 0) = root->polygons.at(i)->vertex(0);
+		F(i, 1) = root->polygons.at(i)->vertex(1);
+		F(i, 2) = root->polygons.at(i)->vertex(2);
+	}
+}
 
-
-void igl::bol::contruct_tree(MatrixXd V, Node* node) {
+void igl::bol::contruct_tree(MatrixXd V, Node* node, MatrixXd projectV) {
 	using namespace std;
 	using namespace Eigen;
 	assert (V.rows() >= 3);
@@ -18,108 +30,17 @@ void igl::bol::contruct_tree(MatrixXd V, Node* node) {
 	RowVector3d p2 = V.row(1);
 	RowVector3d p3 = V.row(2);
 	RowVector3d up = (p2-p1).cross(p3-p1);
-	RowVector3d x = (p2-p2);
-	RowVector3d y = x.cross(up);
+	RowVector3d x = (p2-p2).normalized();
+	RowVector3d y = x.cross(up).normalized();
 	MatrixXd Vn = V.rowwise() - p1;
 	MatrixXd A = MatrixXd::Zero(2, 3);
 	A << x(0), x(1), x(2), y(0), y(1), y(2);
 	MatrixXd piA = A.transpose()*(A * A.transpose()).inverse();
-	MatrixXd projectV = V * piA;
+	projectV = V * piA;
 	MatrixXd temp;
 	MatrixXi xindex;
 	igl::sort(projectV, 1, true, temp, xindex);
 	subdivide(xindex, node);
-}
-
-void igl::bol::constrained_delaunay_triangulation(Eigen::MatrixXd V, Eigen::MatrixXi C, Eigen::MatrixXi F) {
-	Node* root = new Node();
-	contruct_tree(V, root);
-	delaunay_triangulation(V, root);
-	add_constrained(V, C, root);
-	F = Eigen::MatrixXi::Zero(root->polygons.size, 3);
-	for (int i = 0; i < F.rows(); i++) {
-		F(i, 0) = root->polygons.at(i)->vertex.at(0);
-		F(i, 1) = root->polygons.at(i)->vertex.at(1);
-		F(i, 2) = root->polygons.at(i)->vertex.at(2);
-	}
-}
-
-void igl::bol::add_constrained(Eigen::MatrixXd V, Eigen::MatrixXi C, Node* node) {
-	for (int i = 0; i < C.rows(); i++) {
-		break_polygons(V, C.row(i), node->polygons)
-	}
-}
-
-void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vector<Polygon*> polygons, Eigen::RowVectorXi index) {
-	int vidx1 = -1, vidx2 = -1;
-	polygon* start, next;
-	bool intersection = false;
-	for (int i = 0; i < polygons.size(); i++) {
-		vidx1 = find(polygons.at(i), C(0));
-		if (vidx1 != -1) {
-			for (int j = 0; j < polygons.at(i)->size - 1; j++) {
-				if (intersect(V.row(C(0)), V.row(C(1)), 
-							  V.row(polygons.at(i)->vertex(j), 
-							  V.row(polygons.at(i)->vertex(j+1))))) {
-					intersection = true;
-					next = polygons.at(i)->adjacent_polygon.at(j);
-					break;
-				}
-			}
-			if (intersection) {
-				start = polygons.at(i);
-				break;
-			}
-		}		
-		vidx2 = find(polygons.at(i), C(1));
-		if (vidx2 != -1) {
-			for (int j = 0; j < polygons.at(i)->size - 1; j++) {
-				if (intersect(V.row(C(0)), V.row(C(1)), 
-							  V.row(polygons.at(i)->vertex(j), 
-							  V.row(polygons.at(i)->vertex(j+1))))) {
-					intersection = true;
-					next = polygons.at(i)->adjacent_polygon.at(j);
-					break;
-				}
-			}
-			if (intersection) {
-				start = polygons.at(i);
-				break;
-			}
-		}
-	}
-	polygons.erase(std::remove(polygons.begin(), polygons.end(), start), vec.end());
-	while (vidx1 == -1 || vidx2 == -1) {
-		Polygon* new_polygon;
-		merge(start, next, new_polygon);
-		polygons.erase(std::remove(polygons.begin(), polygons.end(), next), vec.end());
-		for (int j = 0; j < new_polygon->size - 1; j++) {
-			if (intersect(V.row(C(0)), V.row(C(1)), 
-						  V.row(new_polygon->vertex(j), 
-						  V.row(new_polygon->vertex(j+1))))) {
-				next = new_polygon->adjacent_polygon.at(j);
-				start = new_polygon
-				break;
-			}
-		}
-		if (vidx1 == -1) {
-			vidx1 = find(polygons.at(i), C(0));
-		}
-		if (vidx2 == -1) {
-			vidx2 = find(polygons.at(i), C(1));
-		}
-	}
-
-	MatrixXi xindex;
-	MatrixXd sub_V;
-	VectorXi cols;
-	igl::colon(0,V.cols()-1, cols);
-	igl::slice(V,new_polygon->vertex,cols,sub_V);
-	igl::slice(index,new_polygon->vertex,cols,xindex);
-	Node* node = new Node();
-	subdivide(xindex, node);
-	delaunay_triangulation(sub_V, node);
-	polygons.insert(polygons.end(), node->polygons.begin(), node->polygons.end());
 }
 
 void igl::bol::subdivide(Eigen::RowVectorXi index, Node* node) {
@@ -138,35 +59,125 @@ void igl::bol::subdivide(Eigen::RowVectorXi index, Node* node) {
 	subdivide(index.tail(n-n/2), right_node);
 }
 
+void igl::bol::add_constrained(Eigen::MatrixXd V, Eigen::MatrixXi C, Node* node) {
+	for (int i = 0; i < C.rows(); i++) {
+		break_polygons(V, C.row(i), node->polygons, node->index);
+	}
+}
+
+void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vector<Polygon*> polygons, Eigen::RowVectorXi index) {
+	int vidx1 = -1, vidx2 = -1;
+	Polygon* start, *next;
+	bool intersection = false;
+	for (int i = 0; i < polygons.size(); i++) {
+		vidx1 = find_vertex(polygons.at(i), C(0));
+		if (vidx1 != -1) {
+			for (int j = 0; j < polygons.at(i)->size - 1; j++) {
+				if (intersect(V.row(C(0)), V.row(C(1)), 
+							  V.row(polygons.at(i)->vertex(j)), 
+							  V.row(polygons.at(i)->vertex(j+1)))) {
+					intersection = true;
+					next = polygons.at(i)->adjacent_polygon.at(j);
+					break;
+				}
+			}
+			if (intersection) {
+				start = polygons.at(i);
+				break;
+			}
+		}		
+		vidx2 = find_vertex(polygons.at(i), C(1));
+		if (vidx2 != -1) {
+			for (int j = 0; j < polygons.at(i)->size - 1; j++) {
+				if (intersect(V.row(C(0)), V.row(C(1)), 
+							  V.row(polygons.at(i)->vertex(j)), 
+							  V.row(polygons.at(i)->vertex(j+1)))) {
+					intersection = true;
+					next = polygons.at(i)->adjacent_polygon.at(j);
+					break;
+				}
+			}
+			if (intersection) {
+				start = polygons.at(i);
+				break;
+			}
+		}
+	}
+	polygons.erase(std::remove(polygons.begin(), polygons.end(), start), polygons.end());
+	Polygon* new_polygon;
+	while (vidx1 == -1 || vidx2 == -1) {
+		merge(start, next, new_polygon);
+		polygons.erase(std::remove(polygons.begin(), polygons.end(), next), polygons.end());
+		for (int j = 0; j < new_polygon->size - 1; j++) {
+			if (intersect(V.row(C(0)), V.row(C(1)), 
+						  V.row(new_polygon->vertex(j)), 
+						  V.row(new_polygon->vertex(j+1)))) {
+				next = new_polygon->adjacent_polygon.at(j);
+				start = new_polygon;
+				break;
+			}
+		}
+		if (vidx1 == -1) {
+			vidx1 = find_vertex(start, C(0));
+		}
+		if (vidx2 == -1) {
+			vidx2 = find_vertex(start, C(1));
+		}
+	}
+
+	MatrixXi xindex;
+	MatrixXd sub_V;
+	VectorXi cols;
+	igl::colon(0,V.cols()-1, cols);
+	igl::slice(V,new_polygon->vertex,cols,sub_V);
+	igl::slice(index,new_polygon->vertex,cols,xindex);
+	Node* node = new Node();
+	subdivide(xindex, node);
+	delaunay_triangulation(sub_V, node);
+	polygons.insert(polygons.end(), node->polygons.begin(), node->polygons.end());
+}
+
 
 void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 	if (node->left) {
 		assert(node->right);
-		build_edges(V, node->left);
 	}
 	if (node->right) {
 		assert(node->left);
-		build_edges(V, node->right);
 	}
 	if (!node->left && !node->right) {
-		Polygon* polygon = new Polygon();
-		polygon->size = node->size;
-		VectorXi edges = VectorXi::Zero(node->size, 2);
-		for (int i = 0; i < node->size; i++) {
-			edges(i, 0) = node->index(i);
-			edges(i, 1) = node->index((i+1) % node->size);
+		if (node->size == 3) {
+			Polygon* polygon = new Polygon();
+			polygon->vertex = VectorXi::Zero(node->size);
+			for (int i = 0; i < node->size; i++) {
+				polygon->vertex(i) = node->index(i);
+				node->edges.push_back(make_tuple(node->index(i), node->index((i+1) % node->size)));
+			}
+			polygon->size = node->size;
+			polygon->adjacent_polygon = {NULL, NULL, NULL};
+			polygon->adjacent_index = {NULL, NULL, NULL};
+			node->polygons.push_back(polygon);
+
 		}
-		polygon->edges = edges;
-		node->edges = edges;
-		node->polygons.push_back(polygon);
+		else {
+			for (int i = 0; i < node->size; i++) {
+				node->edges.push_back(make_tuple(node->index(i), node->index((i+1) % node->size)));
+			}
+		}
 	}
 	else {
+		delaunay_triangulation(V, node->left);
+		delaunay_triangulation(V, node->right);
+
+		// get partial Vs
 		MatrixXd left_sub_V;
 		MatrixXd right_sub_V;
 		VectorXi cols;
 		igl::colon(0,V.cols()-1, cols);
 		igl::slice(V,node->left->index,cols,left_sub_V);
 		igl::slice(V,node->right->index,cols,right_sub_V);
+
+		// get vertical orders of each sub tree
 		MatrixXi left_vert_index;
 		MatrixXi right_vert_index;
 		MatrixXd temp;
@@ -180,8 +191,9 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 			RowVectorXd p2 = right_sub_V.row(right_vert_index(r_vidx,0));
 			bool has_intersection = false;
 			for (int i = 0; i < node->left->index.rows(); i++) {
-				RowVectorXd p3 = V.row(node->left->edges(i, 0));
-				RowVectorXd p4 = V.row(node->left->edges(i, 1));
+				// need to skip self
+				RowVectorXd p3 = V.row(get<0>(node->left->edges.at(i)));
+				RowVectorXd p4 = V.row(get<1>(node->left->edges.at(i)));
 				if (intersect(p1, p2, p3, p4)) {
 					l_vidx ++;
 					has_intersection = true;
@@ -189,8 +201,8 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 				}
 			}
 			for (int i = 0; i < node->right->index.rows(); i++) {
-				RowVectorXd p3 = V.row(node->right->edges(i, 0));
-				RowVectorXd p4 = V.row(node->right->edges(i, 1));
+				RowVectorXd p3 = V.row(get<0>(node->right->edges.at(i)));
+				RowVectorXd p4 = V.row(get<1>(node->right->edges.at(i)));
 				if (intersect(p1, p2, p3, p4)) {
 					r_vidx ++;
 					has_intersection = true;
@@ -201,62 +213,77 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 				break;
 			}
 		}
-		MatrixXi new_edges;
-		new_edges.resize(new_edges.rows()+1, 2);
-		new_edges.row(new_edges.rows() - 1) << node->left->index(l_vidx), node->right->index(r_vidx);
+
+		vector<tuple<int,int>> new_edges;
+		new_edges.push_back(make_tuple(node->left->index(l_vidx), node->right->index(r_vidx)));
 
 		int l_candidate_final = -1;
 		int r_candidate_final = -1;
 		int l_ridx = node->left->index(l_vidx);
 		int r_ridx = node->right->index(r_vidx);
 
-		while (l_candidate_final != -1 || r_candidate_final != -1) {
+		// if no more edges are found, triangulation is complete
+		while (l_candidate_final != -1 && r_candidate_final != -1) {
 			l_candidate_final = -1;
 			r_candidate_final = -1;
 			// find candidates from both side
 			vector<tuple<int,int>> r_candidate;
 			vector<tuple<int,int>> l_candidate;
-			for (int i = 0; i < node->right->edges.rows(); i++) {
+			for (int i = 0; i < node->right->edges.size(); i++) {
 				int other;
-				if (node->right->edges(i, 0) == r_ridx){
-					other = node->right->edges(i, 1);
+
+				// find edges contains right node of base LR edge
+				if (get<0>(node->right->edges.at(i)) == r_ridx){
+					other = get<1>(node->right->edges.at(i));
 				}
-				else if (node->right->edges(i, 1) == r_ridx) {
-					other = node->right->edges(i, 0);
+				else if (get<1>(node->right->edges.at(i)) == r_ridx) {
+					other = get<0>(node->right->edges.at(i));
 				}
+				else {
+					continue;
+				}
+				// to do: need to check angle clock vs counter-clock
 				double a = angle(V.row(r_ridx), V.row(other), V.row(l_ridx));
-				bool added = false;
+
+				// add it to a specific location based on angle
 				for (int j = 0; j < r_candidate.size(); j++) {
 					if (a < get<1>(r_candidate.at(j))){
 						r_candidate.insert(r_candidate.begin() + j, make_tuple(other, a));
-						added = true;
 						break;
 					}
-				}
-				if (!added) {
-					r_candidate.push_back(make_tuple(other, a));
+					// add it to the end if not added before
+					if (j == r_candidate.size()) {
+						r_candidate.push_back(make_tuple(other, a));
+					}
 				}
 			}
 
-			for (int i = 0; i < node->left->edges.rows(); i++) {
+			for (int i = 0; i < node->left->edges.size(); i++) {
 				int other;
-				if (node->left->edges(i, 0) == l_ridx){
-					other = node->left->edges(i, 1);
+
+				// find edges contains left node of base LR edge
+				if (get<0>(node->left->edges.at(i)) == r_ridx){
+					other = get<1>(node->left->edges.at(i));
 				}
-				else if (node->left->edges(i, 1) == l_ridx) {
-					other = node->left->edges(i, 0);
+				else if (get<1>(node->left->edges.at(i)) == r_ridx) {
+					other = get<0>(node->left->edges.at(i));
 				}
+				else {
+					continue;
+				}
+				// to do: need to check angle clock vs counter-clock
 				double a = angle(V.row(l_ridx), V.row(other), V.row(r_ridx));
-				bool added = false;
+
+				// add it to a specific location based on angle
 				for (int j = 0; j < l_candidate.size(); j++) {
 					if (a < get<1>(l_candidate.at(j))){
 						l_candidate.insert(l_candidate.begin() + j, make_tuple(other, a));
-						added = true;
 						break;
 					}
-				}
-				if (!added) {
-					l_candidate.push_back(make_tuple(other, a));
+					// add it to the end if not added before
+					if (j == l_candidate.size()) {
+						l_candidate.push_back(make_tuple(other, a));
+					}
 				}
 			}
 
@@ -267,17 +294,21 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 			int l_candidate_final = -1;
 			int r_candidate_final = -1;
 			for (int i = 0; i < r_candidate.size() - 1; i++) {
+				// terminate if angle is greater than 180
 				if (get<1>(r_candidate.at(i)) > 3.1415926535) {
 					break;
 				}
 				get_circle_center(p_left, p_right, V.row(get<0>(r_candidate.at(i))), center);
+
+				// if next candidate is outside, this is the final candidate
 				if ((p_left-center).dot(p_left-center) < (V.row(get<0>(r_candidate.at(i+1))) - center)
 					.dot(V.row(get<0>(r_candidate.at(i+1))))) {
 					r_candidate_final = get<0>(r_candidate.at(i));
 					break;
 				}
+				// if not, remove this edge
 				else {
-					remove_edge_from_node(node->polygons, p_right, get<0>(r_candidate.at(i)));
+					remove_edge_from_node(node, r_ridx, get<0>(r_candidate.at(i)));
 				}
 			}
 
@@ -286,13 +317,13 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 					break;
 				}
 				get_circle_center(p_left, p_right, V.row(get<0>(l_candidate.at(i))), center);
-				if ((p_left-center).dot(p_left-center) < (V.row(get<0>(r_candidate.at(i+1))) - center)
-					.dot(V.row(get<0>(r_candidate.at(i+1))))) {
-					r_candidate_final = get<0>(l_candidate.at(i));
+				if ((p_left-center).dot(p_left-center) < (V.row(get<0>(l_candidate.at(i+1))) - center)
+					.dot(V.row(get<0>(l_candidate.at(i+1))))) {
+					l_candidate_final = get<0>(l_candidate.at(i));
 					break;
 				}
 				else {
-					remove_edge_from_node(node->polygons, p_left, get<0>(l_candidate.at(i)));
+					remove_edge_from_node(node, l_ridx, get<0>(l_candidate.at(i)));
 				}
 			}
 
@@ -316,10 +347,59 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 			else {
 				break;
 			}
-			new_edges.resize(new_edges.rows()+1, 2);
-			new_edges.row(new_edges.rows() - 1) << l_ridx, r_ridx;
+			Polygon* new_polygon;
+			new_polygon->size = 3;
+			new_polygon->vertex = VectorXi::Zero(3);
+			new_polygon->vertex(0) = r_ridx;
+			new_polygon->adjacent_polygon.push_back(NULL);
+			new_polygon->vertex(1) = l_ridx;
+			if (l_ridx == get<0>(new_edges.at(new_edges.size()-1))) {
+				new_polygon->vertex(2) = get<1>(new_edges.at(new_edges.size()-1));
+				for (int i = 0; i < node->right->polygons.size();i++) {
+					int oppo_idx = exist_edges(node->right->polygons.at(i), 
+											   new_polygon->vertex(2), 
+											   new_polygon->vertex(0));
+					if (oppo_idx != -1) {
+						new_polygon->adjacent_polygon.push_back(node->polygons.at(node->polygons.size()-1));
+						new_polygon->adjacent_polygon.push_back(node->right->polygons.at(i));
+						new_polygon->adjacent_index.push_back(NULL);
+						new_polygon->adjacent_index.push_back(exist_edges(new_polygon->adjacent_polygon.at(1), 
+																		  new_polygon->vertex(1), 
+																		  new_polygon->vertex(2)));
+						new_polygon->adjacent_index.push_back(oppo_idx);	
+						new_polygon->adjacent_polygon.at(1)->adjacent_index.at(new_polygon->adjacent_index.at(1)) = 1;
+						new_polygon->adjacent_polygon.at(2)->adjacent_index.at(new_polygon->adjacent_index.at(2)) = 1;
+						break;
+					}
+				}
+			}
+			else {
+				new_polygon->vertex(2) = get<0>(new_edges.at(new_edges.size()-1));
+				for (int i = 0; i < node->right->polygons.size();i++) {
+					int oppo_idx = exist_edges(node->left->polygons.at(i), 
+											   new_polygon->vertex(1), 
+											   new_polygon->vertex(2));
+					if (oppo_idx != -1) {
+						new_polygon->adjacent_polygon.push_back(node->left->polygons.at(i));
+						new_polygon->adjacent_polygon.push_back(node->polygons.at(node->polygons.size()-1));
+						new_polygon->adjacent_index.push_back(NULL);
+						new_polygon->adjacent_index.push_back(oppo_idx);
+						new_polygon->adjacent_index.push_back(exist_edges(new_polygon->adjacent_polygon.at(2), 
+																		  new_polygon->vertex(2), 
+																		  new_polygon->vertex(0)));
+						new_polygon->adjacent_polygon.at(1)->adjacent_index.at(new_polygon->adjacent_index.at(1)) = 1;
+						new_polygon->adjacent_polygon.at(2)->adjacent_index.at(new_polygon->adjacent_index.at(2)) = 1;
+						break;
+					}
+				}
+			}
+			new_edges.push_back(make_tuple(l_ridx, r_ridx));
+			node->polygons.push_back(new_polygon);
 		}
-		
+		// add all new edges into the list
+		node->edges.insert(node->edges.end(), node->left->edges.begin(), node->left->edges.end());
+		node->edges.insert(node->edges.end(), node->right->edges.begin(), node->right->edges.end());
+		node->edges.insert(node->edges.end(), new_edges.begin(), new_edges.end());
 	}
 
 }

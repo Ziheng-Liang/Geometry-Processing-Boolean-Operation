@@ -8,26 +8,27 @@ namespace igl
 {
     namespace bol
     {
+    	using namespace std;
         struct Node {
             Node* left;
             Node* right;
             int size;
             Eigen::RowVectorXi index;
-            Eigen::MatrixXi edges;
-            std::vector<Polygon*> polygons;
+            vector<tuple<int,int>> edges;
+            vector<Polygon*> polygons;
         };
 
         void remove_edge_from_node(Node* node, int i, int j) {
         	for (int k = 0; k < node->size; k++) {
-        		if ((node->edges(k, 0) == i && node->edges(k, 1) == j) || 
-        			(node->edges(k, j) == i && node->edges(k, 1) == i)) {
+        		if ((get<0>(node->edges.at(k)) == i && get<1>(node->edges.at(k)) == j) || 
+        			(get<1>(node->edges.at(k)) == i && get<0>(node->edges.at(k)) == i)) {
         			node->edges.erase(node->edges.begin()+k);
         			node->size --;
         			break;
         		}
         	}
         	for (int k = 0; k < node->polygons.size(); k++) {
-        		if (exist_edges(node->polygons.at(k), i, j)) {
+        		if (exist_edges(node->polygons.at(k), i, j) != -1) {
         			node->polygons.erase(node->polygons.begin()+k);
         			break;
         		}
