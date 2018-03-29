@@ -10,7 +10,7 @@ namespace igl
     {
         struct Node {
             Node* left;
-            Node* right; 
+            Node* right;
             int size;
             Eigen::RowVectorXi index;
             Eigen::MatrixXi edges;

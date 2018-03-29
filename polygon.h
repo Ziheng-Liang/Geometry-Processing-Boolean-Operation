@@ -86,7 +86,17 @@ namespace igl
                     ab->adjacent_polygon.push_back(a->adjacent_polygon.at(i + 1 - b->size));
                 }
             }
-        } 
+        }
+
+
+        int find_vertex(Polygon* p, int index) {
+            for (int i = 0; i < p->size; i++) {
+                if (p->vertex(i) == index) {
+                    return i;
+                }
+            }
+            return -1;
+        }
     }
 }
 

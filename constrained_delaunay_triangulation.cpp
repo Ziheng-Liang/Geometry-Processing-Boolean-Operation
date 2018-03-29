@@ -8,6 +8,8 @@ using namespace igl::bol;
 using namespace Eigen;
 using namespace std;
 
+
+
 void igl::bol::contruct_tree(MatrixXd V, Node* node) {
 	using namespace std;
 	using namespace Eigen;
@@ -29,10 +31,95 @@ void igl::bol::contruct_tree(MatrixXd V, Node* node) {
 	subdivide(xindex, node);
 }
 
-void igl::bol::constrained_delaunay_triangulation(MatrixXd V, Eigen::MatrixXi C, Eigen::MatrixXi F) {
+void igl::bol::constrained_delaunay_triangulation(Eigen::MatrixXd V, Eigen::MatrixXi C, Eigen::MatrixXi F) {
 	Node* root = new Node();
 	contruct_tree(V, root);
+	delaunay_triangulation(V, root);
+	add_constrained(V, C, root);
+	F = Eigen::MatrixXi::Zero(root->polygons.size, 3);
+	for (int i = 0; i < F.rows(); i++) {
+		F(i, 0) = root->polygons.at(i)->vertex.at(0);
+		F(i, 1) = root->polygons.at(i)->vertex.at(1);
+		F(i, 2) = root->polygons.at(i)->vertex.at(2);
+	}
+}
 
+void igl::bol::add_constrained(Eigen::MatrixXd V, Eigen::MatrixXi C, Node* node) {
+	for (int i = 0; i < C.rows(); i++) {
+		break_polygons(V, C.row(i), node->polygons)
+	}
+}
+
+void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vector<Polygon*> polygons, Eigen::RowVectorXi index) {
+	int vidx1 = -1, vidx2 = -1;
+	polygon* start, next;
+	bool intersection = false;
+	for (int i = 0; i < polygons.size(); i++) {
+		vidx1 = find(polygons.at(i), C(0));
+		if (vidx1 != -1) {
+			for (int j = 0; j < polygons.at(i)->size - 1; j++) {
+				if (intersect(V.row(C(0)), V.row(C(1)), 
+							  V.row(polygons.at(i)->vertex(j), 
+							  V.row(polygons.at(i)->vertex(j+1))))) {
+					intersection = true;
+					next = polygons.at(i)->adjacent_polygon.at(j);
+					break;
+				}
+			}
+			if (intersection) {
+				start = polygons.at(i);
+				break;
+			}
+		}		
+		vidx2 = find(polygons.at(i), C(1));
+		if (vidx2 != -1) {
+			for (int j = 0; j < polygons.at(i)->size - 1; j++) {
+				if (intersect(V.row(C(0)), V.row(C(1)), 
+							  V.row(polygons.at(i)->vertex(j), 
+							  V.row(polygons.at(i)->vertex(j+1))))) {
+					intersection = true;
+					next = polygons.at(i)->adjacent_polygon.at(j);
+					break;
+				}
+			}
+			if (intersection) {
+				start = polygons.at(i);
+				break;
+			}
+		}
+	}
+	polygons.erase(std::remove(polygons.begin(), polygons.end(), start), vec.end());
+	while (vidx1 == -1 || vidx2 == -1) {
+		Polygon* new_polygon;
+		merge(start, next, new_polygon);
+		polygons.erase(std::remove(polygons.begin(), polygons.end(), next), vec.end());
+		for (int j = 0; j < new_polygon->size - 1; j++) {
+			if (intersect(V.row(C(0)), V.row(C(1)), 
+						  V.row(new_polygon->vertex(j), 
+						  V.row(new_polygon->vertex(j+1))))) {
+				next = new_polygon->adjacent_polygon.at(j);
+				start = new_polygon
+				break;
+			}
+		}
+		if (vidx1 == -1) {
+			vidx1 = find(polygons.at(i), C(0));
+		}
+		if (vidx2 == -1) {
+			vidx2 = find(polygons.at(i), C(1));
+		}
+	}
+
+	MatrixXi xindex;
+	MatrixXd sub_V;
+	VectorXi cols;
+	igl::colon(0,V.cols()-1, cols);
+	igl::slice(V,new_polygon->vertex,cols,sub_V);
+	igl::slice(index,new_polygon->vertex,cols,xindex);
+	Node* node = new Node();
+	subdivide(xindex, node);
+	delaunay_triangulation(sub_V, node);
+	polygons.insert(polygons.end(), node->polygons.begin(), node->polygons.end());
 }
 
 void igl::bol::subdivide(Eigen::RowVectorXi index, Node* node) {
@@ -52,7 +139,7 @@ void igl::bol::subdivide(Eigen::RowVectorXi index, Node* node) {
 }
 
 
-void igl::bol::build_edges(MatrixXd V, Node* node) {
+void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 	if (node->left) {
 		assert(node->right);
 		build_edges(V, node->left);

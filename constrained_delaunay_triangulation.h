@@ -13,7 +13,7 @@ namespace igl
   	void contruct_tree(Eigen::MatrixXd V, 
   					   Node* node);
 
-    void constrained_delaunay_triangulation(Eigen::MatrixXd V, 
+    void delaunay_triangulation(Eigen::MatrixXd V, 
     										Eigen::MatrixXi C, 
     										Eigen::MatrixXi F);
 
