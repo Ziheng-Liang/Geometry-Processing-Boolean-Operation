@@ -67,6 +67,33 @@ static void find_point_from_two_plane(const RowVector3r & n1, const rat & d1,
 }
 
 
+//Check whether a point lies between two point.
+//Precondition, 3 points are colinear. b != a
+//Using a bounding box technique to check, much efficient.
+//return if it is inside
+static bool p_lies_ls(const RowVector3r &p, const RowVector3r &a, const RowVector3r & b){
+	rat min_coord[3];
+	min_coord[0] = a(0,0);
+	min_coord[1] = a(0,1);
+	min_coord[2] = a(0,2);
+
+	rat max_coord[3];
+	max_coord[0] = a(0,0);
+	max_coord[1] = a(0,1);
+	max_coord[2] = a(0,2);
+
+	for (int i = 0; i < 3; i++){
+		if (b(0, i) < min_coord[i]) min_coord[i] = b(0, i);
+		if (b(0, i) > max_coord[i]) max_coord[i] = b(0, i);
+	}
+
+	for (int i = 0; i < 3; i++){
+		if (p(0, i) < min_coord[i] || p(0,i) > max_coord[i]) return false; 
+	}
+	return 0;
+
+}
+
 //Find the itersection of two lines
 //Precondition: two lines coplanar
 static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1, 
@@ -107,11 +134,99 @@ static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1,
 }
 
 
+//Find the intersection of two line segment a0-a1 and b0-b1
+//Precondition: two line segment coplanar, a0, a1 not the same point, b0 b1 not the same point
+static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const RowVector3r &a1, 
+	const RowVector3r &b0, const RowVector3r &b1, RowVector3r & p){
+	assert(!(a0.array() == a1.array()).all());
+	assert(!(b0.array() == b1.array()).all());
+	
+	std::vector<RowVector3r> return_v;
+	//two lines can be paralle
+	
+	RowVector3r da = a1 - a0;
+	RowVector3r db = b1 - b0;
+
+	RowVector3r cdadb = da.cross(db);
+	if ((cdadb.array() == 0).all() ){ //da cross db = 0, da db are paralell
+		RowVector3r dc = a1 - b0;
+		RowVector3r cdcdb = dc.cross(db);
+		if ((cdcdb.array() == 0).all()){ //if they are collinear
+			//We have 4 case
+			bool b0_ina = p_lies_ls(b0, a0, a1);
+			bool b1_ina = p_lies_ls(b1, a0, a1);
+			//case 1: one point in b lies in a0-a1. intersection is b-a
+			//case 2: two point in b lies in a0-a1, intersection is b0b1
+			//case 3: 0 point in b lies in a0-a1, 
+				//subcase 1: 0 point of a lies in b0-b1, no intersection
+				//subcase 2: 2 points of a lies in b0-b1, intersection is a0a1
+			if (b0_ina && !b1_ina){
+				rat dotb1b0 = (a1 - a0).dot(b1 - a0);
+				if (dotb1b0 > 0){		//a0-b0-a1-b1//
+					return_v.push_back(b0);
+					return_v.push_back(a1);
+					return return_v;
+				} else if (dotb1b0 < 0){ // b1-a0-b0-a1//
+					return_v.push_back(a0);
+					return_v.push_back(b0);
+					return return_v;
+				}
+
+			} else if (!b0_ina && b1_ina){
+				rat dotb1b0 = (a1-a0).dot(b0 - a0);
+				if (dotb1b0 > 0){ //a0-b1-a1-b0
+					return_v.push_back(b1);
+					return_v.push_back(a1);
+					return return_v;
+				} else if (dotb1b0 < 0){ //b0-a0-b1-a1
+					return_v.push_back(a0);
+					return_v.push_back(b1);
+					return return_v;
+				}
+
+			} else if (b0_ina && b1_ina){ // intersection is b0b1
+				return_v.push_back(b0);
+				return_v.push_back(b1);
+				return return_v;
+			} else if (!b0_ina && !b1_ina){
+				bool a0_inb = p_lies_ls(a0, b0, b1);
+				if (a0_inb){ //intersection is a0a1
+					return_v.push_back(a0);
+					return_v.push_back(a1);
+					return return_v;
+				} else { // no intersection
+					return return_v;
+				}
+			} 
+		} else { //parallel but not colinear, then they should not intersect
+			return return_v;
+		}
+	} else { // if they are not parallel. find the intersection, and check if the point is inside of two line segment
+		RowVector3r intersect_point; 
+		l2l_intersection(a0, da, b0, db, intersect_point);
+		bool p_ina = p_lies_ls(intersect_point, a0, a1);
+		bool p_inb = p_lies_ls(intersect_point, b0, b1);
+		if (p_ina && p_inb){
+			return_v.push_back(intersect_point);
+			return return_v;
+		} else {
+			return return_v;
+		}
+	}
+	//Here should have capture all the cases.
+	assert(false);
+}
+
+
+
+
+
 
 //For solving 2x2 system of linear equaltions
 static void solve2x2(rat a0, rat a1, rat a2, rat a3, rat b1, rat b2){
 
 }
+
 
 
 //Find the t value that cooresponds a poing on line.
@@ -121,6 +236,43 @@ static rat point_on_line(const RowVector3r & p, const RowVector3r & x, const Row
 	for (int i = 0; i < 3; i++){
 		if (d(0,i) != 0) return v(0,i)/d(0,i);
 	}
+}
+
+
+//Return the intersecting line point in order. so that every consecutive pair of points are the intersecting line segments
+static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, const Matrix33r & B){
+	//This is quite complicated:
+	//The intersection test is symmetric, meaning: intersect(A,B) = intersect(B,A)
+	//Case 1: none of B vertex lies in A and none of A vertex lies in B
+		//sub case 1: 3 edge from B intersect A	
+			//Star of David! https://en.wikipedia.org/wiki/Star_of_David
+			//hexagon!
+		//sub case 2: 2 edge from B intersect A
+			//quadrilateral
+		//sub case 3: 0 edge from B intersect A
+			//no intersection
+
+	//Case 2: else if some vertex of A lies in B
+		//sub case 1:  1 of A vertex lies in B
+			//sub sub case 1: 2 edge from A intersect same edge on B
+				//A triangle 
+			//sub sub case 2: 2 edge from A intersect different edge on B
+				//sub sub sub case 1 the other edge has no intersection to B
+					//quadrilateral or pentagon
+				//sub sub sub case 1 the other edge has intersection to B
+					//quadrilateral or pentagon (depends whether intersection are the same point)
+		//sub case 2: 2 of A vertex lies in B
+			//sub sub case 1: 2 edge from A intersect same edge on B
+				//quadrilateral
+			//sub sub case 2: 2 edge from A intersect different edge on B
+				//pentagon
+		//sub case 3: 3 of A vertex lies in B
+			//Triangle A
+	//Case 3: else if some vertex B lies in A
+		//Do the same check for B
+
+
+
 }
 
 //A helper: Find the intersection of a triangle touches a plane and a line
