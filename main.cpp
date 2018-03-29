@@ -4,7 +4,15 @@
 #include <iostream> 
 #include <boost/multiprecision/cpp_int.hpp> 
 #include "boost_include.h"
-#include "triangle.h"
+// #include "triangle.h"
+// #include "constrained_delaunay_triangulation.h"
+// #include "constrained_delaunay_triangulation.cpp"
+#include "polygon.h"
+
+// motivation
+// current
+// future work
+
 int main()
 {
   using namespace boost::multiprecision;
@@ -28,39 +36,39 @@ int main()
   vt(2) = 0.5;
   std::cout << vt << std::endl;
 
-  MatrixXr vnew = V.cast<cpp_rational> ();
+  // MatrixXr vnew = V.cast<cpp_rational> ();
 
-  std::cout << vnew << std::endl;
+  // std::cout << vnew << std::endl;
 
-  Matrix33r A, B;
-  A(0,0) = 0;
-  A(0,1) = 0;
-  A(0,2) = 0;
+  // Matrix33r A, B;
+  // A(0,0) = 0;
+  // A(0,1) = 0;
+  // A(0,2) = 0;
 
-  A(1,0) = 0;
-  A(1,1) = 1;
-  A(1,2) = 0;
+  // A(1,0) = 0;
+  // A(1,1) = 1;
+  // A(1,2) = 0;
 
-  A(2,0) = 1;
-  A(2,1) = 0;
-  A(2,2) = 0;
+  // A(2,0) = 1;
+  // A(2,1) = 0;
+  // A(2,2) = 0;
 
-  B(0,0) = 0;
-  B(0,1) = 0;
-  B(0,2) = -1;
+  // B(0,0) = 0;
+  // B(0,1) = 0;
+  // B(0,2) = -1;
 
-  B(1,0) = 2;
-  B(1,1) = 2;
-  B(1,2) = 0;
+  // B(1,0) = 2;
+  // B(1,1) = 2;
+  // B(1,2) = 0;
 
-  B(2,0) = 0;
-  B(2,1) = 0;
-  B(2,2) = 1;
+  // B(2,0) = 0;
+  // B(2,1) = 0;
+  // B(2,2) = 1;
 
    
-  std::vector<RowVector3r> r =igl::bol::t2t_intersect(A, B);
-  for (int i = 0; i<r.size(); i++){
-    std::cout << r[i] << std::endl;
-  }
+  // std::vector<RowVector3r> r =igl::bol::t2t_intersect(A, B);
+  // for (int i = 0; i<r.size(); i++){
+  //   std::cout << r[i] << std::endl;
+  // }
   return 0; 
 }

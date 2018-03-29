@@ -277,8 +277,7 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 					break;
 				}
 				else {
-					// remove edges from polygon
-					// remove edegs from node
+					remove_edge_from_node(node->polygons, p_right, get<0>(r_candidate.at(i)));
 				}
 			}
 
@@ -293,9 +292,7 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 					break;
 				}
 				else {
-					continue;
-					// remove edges from polygon
-					// remove edegs from node
+					remove_edge_from_node(node->polygons, p_left, get<0>(l_candidate.at(i)));
 				}
 			}
 
@@ -322,7 +319,7 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 			new_edges.resize(new_edges.rows()+1, 2);
 			new_edges.row(new_edges.rows() - 1) << l_ridx, r_ridx;
 		}
-		// merge ll_edges, lr_edges, rr_edges
+		
 	}
 
 }

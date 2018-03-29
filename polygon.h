@@ -8,6 +8,8 @@ namespace igl
             int size; // number of vertex
             Eigen::VectorXi vertex; // ordered vertex list
             std::vector<Polygon*> adjacent_polygon;
+            // self = adjacent_polygon.at(i)->adjacent_polygon.at(adjacent_index.at(i))
+            std::vector<int> adjacent_index; 
         };
 
         void split (Polygon* ab, Polygon* a, Polygon* b, std::tuple<int,int> new_edge) {
@@ -38,18 +40,28 @@ namespace igl
             for (int i = 0; i < ab->size; i++) {
                 if (i < idx1) {
                     a->adjacent_polygon.push_back(ab->adjacent_polygon.at(i));
+                    a->adjacent_index.push_back(i);
+                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index(i)) = a;
                 }
                 if (i == idx1) {
                     a->adjacent_polygon.push_back(b);
+                    a->adjacent_index.push_back(i);
+                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index(i)) = a;
                 }
                 if (i >= idx1 && i < idx2) {
                     b->adjacent_polygon.push_back(ab->adjacent_polygon.at(i));
+                    b->adjacent_index.push_back(i);
+                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index(i)) = b;
                 }
                 if (i == idx2) {
                     b->adjacent_polygon.push_back(a);
+                    b->adjacent_index.push_back(i);
+                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index(i)) = b;
                 }
                 if (i >= idx2) {
                     a->adjacent_polygon.push_back(ab->adjacent_polygon.at(i));
+                    a->adjacent_index.push_back(i);
+                    ab->adjacent_polygon.at(i)->adjacent_polygon.at(ab->adjacent_index(i)) = a;
                 }
             }
         }
@@ -76,15 +88,19 @@ namespace igl
                 if (i < idx1) {
                     ab->vertex(i) = a->vertex(i); 
                     ab->adjacent_polygon.push_back(a->adjacent_polygon.at(i));
+                    ab->adjacent_index.push_back(a->adjacent_index.at(i));
                 }
                 else if (i <= idx1 + b->size - 1) {
                     ab->vertex(i) = b->vertex((i - idx1 + idx2 + 1)%b->size);
                     ab->adjacent_polygon.push_back(a->adjacent_polygon.at((i - idx1 + idx2 + 1)%b->size));
+                    ab->adjacent_index.push_back(a->adjacent_index.at((i - idx1 + idx2 + 1)%b->size));
                 }
                 else {
                     ab->vertex(i) = a->vertex(i + 1 - b->size);
                     ab->adjacent_polygon.push_back(a->adjacent_polygon.at(i + 1 - b->size));
+                    ab->adjacent_index.push_back(a->adjacent_index.at(i));
                 }
+                ab->adjacent_polygon.at(i)->adjacent_index.at(ab->adjacent_index.at(i))= i;
             }
         }
 
@@ -96,6 +112,15 @@ namespace igl
                 }
             }
             return -1;
+        }
+        bool exist_edges(Polygon* p, int i, int j) {
+            for (int k = 0; k < p->size - 1; k++) {
+                if ((p->vertex(k) == i && p->vertex(k+1) == j) ||
+                    (p->vertex(k) == j && p->vertex(k+1) == i)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }
