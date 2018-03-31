@@ -3,6 +3,7 @@
 #include <igl/slice.h>
 #include <igl/colon.h>
 #include <math.h> 
+#include <iostream>
 
 using namespace igl::bol;
 using namespace Eigen;
@@ -11,9 +12,13 @@ using namespace std;
 void igl::bol::constrained_delaunay_triangulation(Eigen::MatrixXd V, Eigen::MatrixXi C, Eigen::MatrixXi F) {
 	Node* root = new Node();
 	MatrixXd projectV;
+	cout << "test1" << endl;
 	contruct_tree(V, root, projectV);
+	cout << "test2" << endl;
 	delaunay_triangulation(projectV, root);
+	cout << "test3" << endl;
 	add_constrained(projectV, C, root);
+	cout << "test4" << endl;
 	F = Eigen::MatrixXi::Zero(root->polygons.size(), 3);
 	for (int i = 0; i < F.rows(); i++) {
 		F(i, 0) = root->polygons.at(i)->vertex(0);

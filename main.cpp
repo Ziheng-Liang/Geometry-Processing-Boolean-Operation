@@ -5,7 +5,7 @@
 #include <boost/multiprecision/cpp_int.hpp> 
 #include "boost_include.h"
 // #include "triangle.h"
-// #include "constrained_delaunay_triangulation.h"
+#include "constrained_delaunay_triangulation.h"
 // #include "constrained_delaunay_triangulation.cpp"
 #include "polygon.h"
 
@@ -35,6 +35,9 @@ int main()
   vt(1) = 0.5;
   vt(2) = 0.5;
   std::cout << vt << std::endl;
+  Eigen::MatrixXi temp;
+  Eigen::MatrixXi F1;
+  constrained_delaunay_triangulation(V, temp, F1);
 
   // MatrixXr vnew = V.cast<cpp_rational> ();
 

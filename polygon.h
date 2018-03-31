@@ -1,5 +1,8 @@
 #ifndef IGL_BOL_Polygon_H
 #define IGL_BOL_Polygon_H
+#include <Eigen/Dense>
+#include <vector>
+
 namespace igl
 {
     namespace bol

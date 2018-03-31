@@ -1,5 +1,5 @@
 #include "my_node.h"
-#include "boost_include.h"
+#include "polygon.h"
 #include <Eigen/Dense>
 
 #ifndef IGL_BOL_CONSTRAINED_DELAUNAY_TRIANGULATION_H
