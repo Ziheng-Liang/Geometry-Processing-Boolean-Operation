@@ -1,12 +1,17 @@
 #include "triangle.h"
 #include <vector>
 #include <iostream>
+#include <array>
 using namespace igl::bol;
 bool igl::bol::is_degenerate(Matrix33r V){
 	// return (V.row(0).array() == V.row(1).array() ||
 	// 		V.row(0).array() == V.row(1).array() ||
 	// 		V.row(1).array() == V.row(2).array());
 	return false;
+}
+
+static bool vectors_equal(const RowVector3r & a, const RowVector3r & b){
+	return (a.array() == b.array()).all();
 }
 
 static int find_different_sign(rat d[3]){
@@ -137,7 +142,7 @@ static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1,
 //Find the intersection of two line segment a0-a1 and b0-b1
 //Precondition: two line segment coplanar, a0, a1 not the same point, b0 b1 not the same point
 static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const RowVector3r &a1, 
-	const RowVector3r &b0, const RowVector3r &b1, RowVector3r & p){
+	const RowVector3r &b0, const RowVector3r &b1){
 	assert(!(a0.array() == a1.array()).all());
 	assert(!(b0.array() == b1.array()).all());
 	
@@ -238,42 +243,113 @@ static rat point_on_line(const RowVector3r & p, const RowVector3r & x, const Row
 	}
 }
 
-
-//Return the intersecting line point in order. so that every consecutive pair of points are the intersecting line segments
-static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, const Matrix33r & B){
-	//This is quite complicated:
-	//The intersection test is symmetric, meaning: intersect(A,B) = intersect(B,A)
-	//Case 1: none of B vertex lies in A and none of A vertex lies in B
-		//sub case 1: 3 edge from B intersect A	
-			//Star of David! https://en.wikipedia.org/wiki/Star_of_David
-			//hexagon!
-		//sub case 2: 2 edge from B intersect A
-			//quadrilateral
-		//sub case 3: 0 edge from B intersect A
-			//no intersection
-
-	//Case 2: else if some vertex of A lies in B
-		//sub case 1:  1 of A vertex lies in B
-			//sub sub case 1: 2 edge from A intersect same edge on B
-				//A triangle 
-			//sub sub case 2: 2 edge from A intersect different edge on B
-				//sub sub sub case 1 the other edge has no intersection to B
-					//quadrilateral or pentagon
-				//sub sub sub case 1 the other edge has intersection to B
-					//quadrilateral or pentagon (depends whether intersection are the same point)
-		//sub case 2: 2 of A vertex lies in B
-			//sub sub case 1: 2 edge from A intersect same edge on B
-				//quadrilateral
-			//sub sub case 2: 2 edge from A intersect different edge on B
-				//pentagon
-		//sub case 3: 3 of A vertex lies in B
-			//Triangle A
-	//Case 3: else if some vertex B lies in A
-		//Do the same check for B
-
-
-
+//Check whether point is inside the triangle
+static bool point_in_triangle(const RowVector3r & q, const Matrix33r & A){
+	RowVector3r a = A.row(0);
+	RowVector3r b = A.row(1);
+	RowVector3r c = A.row(2);
+    auto u = b - a;
+    auto v = c - a;
+    auto n = u.cross(v);
+    auto w = q - a;
+    rat a0 = u.cross(w).dot(n)/n.dot(n);
+    rat a1 = w.cross(v).dot(n)/n.dot(n);
+    rat a2 = 1 - a0 - a1;
+    return (a0 >= 0 && a0 <=1) && (a1 >= 0 && a1 <=1)  &&(a2 >= 0 && a2 <=1);
 }
+
+
+//Return the list of segments
+static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, const Matrix33r & B){
+
+	std::vector<RowVector3r> return_v;
+	//Array of bool to check if a point is in triangle or not
+	bool vint[2][3];
+	bool no_point_inside = true;
+	for (int t = 0; t < 2; t++){
+		const Matrix33r & cur_triangle = (t == 0) ? A : B;
+		const Matrix33r & other_triangle = (t == 0) ? B : A;
+		for (int i = 0; i < 3; i++){
+			RowVector3r cur_vertex = cur_triangle.row(i);
+			vint[t][i] = point_in_triangle(cur_vertex, other_triangle);
+			if (vint[t][i]) no_point_inside = false;
+		}
+	}
+	std::array<std::array<std::vector<RowVector3r>, 3>, 3> intersect_points;
+	bool no_intersection = true;
+	for (int i = 0; i < 3; i++){
+		RowVector3r a0 = A.row(i);
+		RowVector3r a1 = A.row((i+1)%3);
+		for (int j = 0; j < 3; j++){
+			RowVector3r b0 = B.row(i);
+			RowVector3r b1 = B.row((i+1)%3);
+			auto intersections = ls2ls_intersection(a0, a1, b0, b1);
+			if (intersections.size() != 0) no_intersection = false;
+			intersect_points[i][j] = intersections;
+		}
+
+	}
+
+	if (no_intersection && no_point_inside){ //No overlapping area
+		return return_v;
+	}
+
+	//Add A's intersection loop through [0, 1] [1, 2] [2, 3]
+	//Here it could add potentially two duplicate point
+	for (int t = 0; t < 2; t++){
+		const Matrix33r & cur_triangle = (t == 0) ? A : B;
+
+
+		for (int i = 0; i < 3; i++){
+			if (vint[t][i] && vint[t][(i+1)%3]){ //If both vertex is inside
+				return_v.push_back(cur_triangle.row(i));
+				return_v.push_back(cur_triangle.row((i+1)%3));
+			} else if (vint[t][i]){ //if one vertex is inside, the other is strictly outside
+				return_v.push_back(cur_triangle.row(i));
+				bool vertex_added = false;
+				for (int j = 0; j < 3; j++){
+					int m, n;
+					m = (t == 0) ? i : j;
+					n = (t == 0) ? j : i;
+					if (intersect_points[m][n].size()==1 && !vectors_equal(intersect_points[m][n][0], cur_triangle.row(i))){
+						return_v.push_back(intersect_points[m][n][0]);
+						vertex_added = true;
+					}
+				}
+				if (!vertex_added){
+					return_v.push_back(cur_triangle.row(i));
+				}
+			} else if (vint[t][(i+1)%3]){ // if other vertex is inside
+				return_v.push_back(cur_triangle.row((i+1)%3));
+				bool vertex_added = false;
+				for (int j = 0; j < 3; j++){
+					int m, n;
+					m = (t == 0) ? i : j;
+					n = (t == 0) ? j : i;
+					if (intersect_points[m][n].size()==1 && !vectors_equal(intersect_points[m][n][0], cur_triangle.row((i+1)%3))){
+						return_v.push_back(intersect_points[m][n][0]);
+						vertex_added = true;
+					}
+				}
+				if (!vertex_added){
+					return_v.push_back(cur_triangle.row((i+1)%3));
+				}
+			} else {
+				bool is_colinear = false;
+				for(int j = 0; j < 3; j++){
+					int m, n;
+					m = (t == 0) ? i : j;
+					n = (t == 0) ? j : i;
+					if (intersect_points[m][n].size()==1){ 
+						return_v.push_back(intersect_points[m][n][0]);
+					}
+				}
+			}
+		}
+	}
+}
+
+
 
 //A helper: Find the intersection of a triangle touches a plane and a line
 static void t2plane_intersect_line(const Matrix33r & A, rat sd[3], const RowVector3r & p, const RowVector3r & d, RowVector3r & p0, RowVector3r &p1, rat & t0, rat & t1){
