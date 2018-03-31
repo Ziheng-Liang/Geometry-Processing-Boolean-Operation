@@ -428,8 +428,7 @@ std::vector<RowVector3r> igl::bol::t2t_intersect(const Matrix33r & A, const Matr
 	std::vector<RowVector3r> return_v;
 
 	if (sdB2A[0] == 0 && sdB2A[1] == 0 && sdB2A[2] == 0){ //coplanar
-
-
+		return coplanar_t2t_intersection(A, B);
 	} else {
 		if ((sdB2A[0] > 0 && sdB2A[1] > 0 && sdB2A[2] > 0) 
 			|| (sdB2A[0] < 0 && sdB2A[1] < 0 && sdB2A[2] < 0)){//no intersection
