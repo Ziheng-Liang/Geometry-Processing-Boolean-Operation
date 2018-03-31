@@ -11,8 +11,8 @@ LDFLAGS = -lpthread
 %.o : %.cpp
 	$(CC) $(CFLAGS) -c $< -o $@ $(LDFLAGS)
  
-main: main.cpp boost_include.h
-	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+main: main.cpp boost_include.h triangle.o constrained_delaunay_triangulation.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 	
 
 clean: 
