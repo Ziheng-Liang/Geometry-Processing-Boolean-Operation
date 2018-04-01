@@ -1,8 +1,8 @@
-#include "polygon.h"
-#include <Eigen/Dense>
-
 #ifndef IGL_BOL_Node_H
 #define IGL_BOL_Node_H
+
+#include "polygon.h"
+#include <Eigen/Dense>
 
 namespace igl
 {
@@ -13,12 +13,12 @@ namespace igl
             Node* left;
             Node* right;
             int size;
-            Eigen::RowVectorXi index;
+            Eigen::VectorXi index;
             vector<tuple<int,int>> edges;
             vector<Polygon*> polygons;
         };
 
-        void remove_edge_from_node(Node* node, int i, int j) {
+        inline void remove_edge_from_node(Node* node, int i, int j) {
         	for (int k = 0; k < node->size; k++) {
         		if ((get<0>(node->edges.at(k)) == i && get<1>(node->edges.at(k)) == j) || 
         			(get<1>(node->edges.at(k)) == i && get<0>(node->edges.at(k)) == i)) {
