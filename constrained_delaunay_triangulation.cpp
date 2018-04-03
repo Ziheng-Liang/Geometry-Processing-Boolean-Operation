@@ -50,6 +50,10 @@ void igl::bol::contruct_tree(const MatrixXd &V, Node* node, MatrixXd &projectV) 
 	MatrixXd temp;
 	MatrixXi xindex;
 
+	projectV = MatrixXd::Zero(V.rows(), 2);
+	projectV.col(0) = V.col(0);
+	projectV.col(1) = V.col(1);
+
 	cout << "test1.4" << endl;
 	igl::sort(projectV, 1, true, temp, xindex);
 	cout << "test1.5" << endl;
@@ -83,15 +87,23 @@ void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vect
 	int vidx1 = -1, vidx2 = -1;
 	Polygon* start, *next;
 	bool intersection = false;
+	cout << "test3.1" << endl;
 	for (int i = 0; i < polygons.size(); i++) {
 		vidx1 = find_vertex(polygons.at(i), C(0));
+		cout << vidx1 << endl;
 		if (vidx1 != -1) {
-			for (int j = 0; j < polygons.at(i)->size - 1; j++) {
+			for (int j = 1; j < polygons.at(i)->size; j++) {
+				cout << "test3.11" << endl;	
+				cout << C(0) << endl;
+				cout << C(1) << endl;
+				cout << polygons.at(i)->vertex(j-1) << endl;
+				cout << polygons.at(i)->vertex(j) << endl;
 				if (intersect(V.row(C(0)), V.row(C(1)), 
-							  V.row(polygons.at(i)->vertex(j)), 
-							  V.row(polygons.at(i)->vertex(j+1)))) {
+							  V.row(polygons.at(i)->vertex(j-1)), 
+							  V.row(polygons.at(i)->vertex(j)))) {
 					intersection = true;
 					next = polygons.at(i)->adjacent_polygon.at(j);
+					cout << "found" << endl;
 					break;
 				}
 			}
@@ -102,12 +114,13 @@ void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vect
 		}		
 		vidx2 = find_vertex(polygons.at(i), C(1));
 		if (vidx2 != -1) {
-			for (int j = 0; j < polygons.at(i)->size - 1; j++) {
+			for (int j = 1; j < polygons.at(i)->size; j++) {
 				if (intersect(V.row(C(0)), V.row(C(1)), 
-							  V.row(polygons.at(i)->vertex(j)), 
-							  V.row(polygons.at(i)->vertex(j+1)))) {
+							  V.row(polygons.at(i)->vertex(j-1)), 
+							  V.row(polygons.at(i)->vertex(j)))) {
 					intersection = true;
 					next = polygons.at(i)->adjacent_polygon.at(j);
+					cout << "found" << endl;
 					break;
 				}
 			}
@@ -117,10 +130,23 @@ void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vect
 			}
 		}
 	}
+	if (start) {
+		cout << "has_start" << endl;
+	}
+	if (next) {
+		cout << "has_next" << endl;
+	}
+	if (!start && !next) {
+		return;
+	}
+
+	cout << "test3.2" << endl;
 	polygons.erase(std::remove(polygons.begin(), polygons.end(), start), polygons.end());
-	Polygon* new_polygon;
+	Polygon* new_polygon = new Polygon();
 	while (vidx1 == -1 || vidx2 == -1) {
+		cout << "test3.26" << endl;
 		merge(start, next, new_polygon);
+		cout << "test3.25" << endl;
 		polygons.erase(std::remove(polygons.begin(), polygons.end(), next), polygons.end());
 		for (int j = 0; j < new_polygon->size - 1; j++) {
 			if (intersect(V.row(C(0)), V.row(C(1)), 
@@ -142,12 +168,16 @@ void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vect
 	MatrixXi xindex;
 	MatrixXd sub_V;
 	VectorXi cols;
+	cout << "test3.3" << endl;
 	igl::colon(0,V.cols()-1, cols);
 	igl::slice(V,new_polygon->vertex,cols,sub_V);
 	igl::slice(index,new_polygon->vertex,cols,xindex);
+	cout << "test3.4" << endl;
 	Node* node = new Node();
 	subdivide(xindex, node);
+	cout << "test3.5" << endl;
 	delaunay_triangulation(sub_V, node);
+	cout << "test3.6" << endl;
 	polygons.insert(polygons.end(), node->polygons.begin(), node->polygons.end());
 }
 
@@ -435,32 +465,39 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 			new_polygon->vertex = VectorXi::Zero(3);
 			new_polygon->vertex(0) = r_ridx;
 			cout << "test2.77" << endl;
-			new_polygon->adjacent_polygon.push_back(NULL);
 			cout << "test2.78" << endl;
 			new_polygon->vertex(1) = l_ridx;
 			cout << "test2.8" << endl;
+			// up is always NULL, will be updated in the future
+			new_polygon->adjacent_polygon.push_back(NULL);
+			new_polygon->adjacent_index.push_back(NULL);
 			if (l_ridx == get<0>(new_edges.at(new_edges.size()-1))) {
 				new_polygon->vertex(2) = get<1>(new_edges.at(new_edges.size()-1));
+				// if it is not bottom edege
+				if (node->polygons.size() != 0) {
+					new_polygon->adjacent_polygon.push_back(node->polygons.at(node->polygons.size()-1));
+					new_polygon->adjacent_index.push_back(exist_edges(new_polygon->adjacent_polygon.at(1), 
+																  new_polygon->vertex(1), 
+																  new_polygon->vertex(2)));
+				}
+				// if it is bottom edge
+				else {
+					new_polygon->adjacent_polygon.push_back(NULL);
+					new_polygon->adjacent_index.push_back(NULL);
+				}
 				for (int i = 0; i < node->right->polygons.size();i++) {
 					int oppo_idx = exist_edges(node->right->polygons.at(i), 
 											   new_polygon->vertex(2), 
 											   new_polygon->vertex(0));
 					if (oppo_idx != -1) {
-						new_polygon->adjacent_polygon.push_back(node->polygons.at(node->polygons.size()-1));
 						new_polygon->adjacent_polygon.push_back(node->right->polygons.at(i));
-						new_polygon->adjacent_index.push_back(NULL);
-						new_polygon->adjacent_index.push_back(exist_edges(new_polygon->adjacent_polygon.at(1), 
-																		  new_polygon->vertex(1), 
-																		  new_polygon->vertex(2)));
-						new_polygon->adjacent_index.push_back(oppo_idx);	
-						new_polygon->adjacent_polygon.at(1)->adjacent_index.at(new_polygon->adjacent_index.at(1)) = 1;
-						new_polygon->adjacent_polygon.at(2)->adjacent_index.at(new_polygon->adjacent_index.at(2)) = 1;
+						new_polygon->adjacent_index.push_back(oppo_idx);
 						break;
 					}
 				}
 			}
 			else {
-				cout << "test2.9" << endl;
+				cout << "test2.92" << endl;
 				new_polygon->vertex(2) = get<0>(new_edges.at(new_edges.size()-1));
 				for (int i = 0; i < node->right->polygons.size();i++) {
 					int oppo_idx = exist_edges(node->left->polygons.at(i), 
@@ -468,18 +505,29 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 											   new_polygon->vertex(2));
 					if (oppo_idx != -1) {
 						new_polygon->adjacent_polygon.push_back(node->left->polygons.at(i));
-						new_polygon->adjacent_polygon.push_back(node->polygons.at(node->polygons.size()-1));
-						new_polygon->adjacent_index.push_back(NULL);
 						new_polygon->adjacent_index.push_back(oppo_idx);
-						new_polygon->adjacent_index.push_back(exist_edges(new_polygon->adjacent_polygon.at(2), 
-																		  new_polygon->vertex(2), 
-																		  new_polygon->vertex(0)));
-						new_polygon->adjacent_polygon.at(1)->adjacent_index.at(new_polygon->adjacent_index.at(1)) = 1;
-						new_polygon->adjacent_polygon.at(2)->adjacent_index.at(new_polygon->adjacent_index.at(2)) = 1;
 						break;
 					}
 				}
+				if (node->polygons.size() != 0) {
+					new_polygon->adjacent_polygon.push_back(node->polygons.at(node->polygons.size()-1));
+					new_polygon->adjacent_index.push_back(exist_edges(new_polygon->adjacent_polygon.at(2), 
+																			  new_polygon->vertex(2), 
+																			  new_polygon->vertex(0)));
+				}
+				else {
+					new_polygon->adjacent_polygon.push_back(NULL);
+					new_polygon->adjacent_index.push_back(NULL);
+				}
 			}
+
+			if (new_polygon->adjacent_polygon.size() >= 2 && new_polygon->adjacent_polygon.at(1)) {
+				new_polygon->adjacent_polygon.at(1)->adjacent_index.at(new_polygon->adjacent_index.at(1)) = 1;
+			}
+			if (new_polygon->adjacent_polygon.size() >= 3 && new_polygon->adjacent_polygon.at(2)) {
+				new_polygon->adjacent_polygon.at(2)->adjacent_index.at(new_polygon->adjacent_index.at(2)) = 2;
+			}
+
 			new_edges.push_back(make_tuple(l_ridx, r_ridx));
 			node->polygons.push_back(new_polygon);
 			cout << new_edges.size() << endl;
@@ -491,6 +539,8 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 		node->edges.insert(node->edges.end(), node->left->edges.begin(), node->left->edges.end());
 		node->edges.insert(node->edges.end(), node->right->edges.begin(), node->right->edges.end());
 		node->edges.insert(node->edges.end(), new_edges.begin(), new_edges.end());
+		node->polygons.insert(node->polygons.end(), node->left->polygons.begin(), node->left->polygons.end());
+		node->polygons.insert(node->polygons.end(), node->right->polygons.begin(), node->right->polygons.end());
 	}
 
 }
