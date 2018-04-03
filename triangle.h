@@ -11,6 +11,9 @@ namespace igl {
 
 		//Intersect triangle A and B
 		std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix33r & B);
+		//Intersection of two line segment
+		std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const RowVector3r &a1, 
+			const RowVector3r &b0, const RowVector3r &b1);
 	}
 }
 

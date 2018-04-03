@@ -4,10 +4,10 @@
 #include <array>
 using namespace igl::bol;
 bool igl::bol::is_degenerate(Matrix33r V){
-	// return (V.row(0).array() == V.row(1).array() ||
-	// 		V.row(0).array() == V.row(1).array() ||
-	// 		V.row(1).array() == V.row(2).array());
-	return false;
+	RowVector3r a  = V.row(1) - V.row(0);
+	RowVector3r b = V.row(2) - V.row(0);
+
+	return (a.cross(b).array() == 0).all();
 }
 
 static bool vectors_equal(const RowVector3r & a, const RowVector3r & b){
@@ -95,7 +95,7 @@ static bool p_lies_ls(const RowVector3r &p, const RowVector3r &a, const RowVecto
 	for (int i = 0; i < 3; i++){
 		if (p(0, i) < min_coord[i] || p(0,i) > max_coord[i]) return false; 
 	}
-	return 0;
+	return true;
 
 }
 
@@ -114,7 +114,7 @@ static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1,
 		int a0 = i;
 		int a1 = (i+1)%3;
 		int a2 = (i+2)%3;
-		if (d1(a0) * (-d2(a1)) - d1(a0) * (-d2(a1)) != 0) { //if it is invertible
+		if (d1(a0) * (-d2(a1)) - d1(a1) * (-d2(a0)) != 0) { //if it is invertible
 			MatrixXr left;
 			left.resize(2,2);
 			left(0,0) = d1(0,a0);
@@ -141,8 +141,8 @@ static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1,
 
 //Find the intersection of two line segment a0-a1 and b0-b1
 //Precondition: two line segment coplanar, a0, a1 not the same point, b0 b1 not the same point
-static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const RowVector3r &a1, 
-	const RowVector3r &b0, const RowVector3r &b1){
+std::vector<RowVector3r> igl::bol::ls2ls_intersection(const RowVector3r &a0, const RowVector3r &a1, 
+			const RowVector3r &b0, const RowVector3r &b1){
 	assert(!(a0.array() == a1.array()).all());
 	assert(!(b0.array() == b1.array()).all());
 	
@@ -156,6 +156,7 @@ static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const 
 	if ((cdadb.array() == 0).all() ){ //da cross db = 0, da db are paralell
 		RowVector3r dc = a1 - b0;
 		RowVector3r cdcdb = dc.cross(db);
+
 		if ((cdcdb.array() == 0).all()){ //if they are collinear
 			//We have 4 case
 			bool b0_ina = p_lies_ls(b0, a0, a1);
@@ -165,6 +166,7 @@ static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const 
 			//case 3: 0 point in b lies in a0-a1, 
 				//subcase 1: 0 point of a lies in b0-b1, no intersection
 				//subcase 2: 2 points of a lies in b0-b1, intersection is a0a1
+
 			if (b0_ina && !b1_ina){
 				rat dotb1b0 = (a1 - a0).dot(b1 - a0);
 				if (dotb1b0 > 0){		//a0-b0-a1-b1//
@@ -209,6 +211,7 @@ static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const 
 	} else { // if they are not parallel. find the intersection, and check if the point is inside of two line segment
 		RowVector3r intersect_point; 
 		l2l_intersection(a0, da, b0, db, intersect_point);
+		std::cout << intersect_point << std::endl;
 		bool p_ina = p_lies_ls(intersect_point, a0, a1);
 		bool p_inb = p_lies_ls(intersect_point, b0, b1);
 		if (p_ina && p_inb){
