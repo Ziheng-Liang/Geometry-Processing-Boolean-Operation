@@ -1,9 +1,9 @@
+#ifndef IGL_BOL_CONSTRAINED_DELAUNAY_TRIANGULATION_H
+#define IGL_BOL_CONSTRAINED_DELAUNAY_TRIANGULATION_H
+
 #include "my_node.h"
 #include "polygon.h"
 #include <Eigen/Dense>
-
-#ifndef IGL_BOL_CONSTRAINED_DELAUNAY_TRIANGULATION_H
-#define IGL_BOL_CONSTRAINED_DELAUNAY_TRIANGULATION_H
 
 
 namespace igl
@@ -12,13 +12,13 @@ namespace igl
   {
     using namespace Eigen;
     using namespace std;
-    void constrained_delaunay_triangulation(MatrixXd V, 
-                                            MatrixXi C, 
-                                            MatrixXi F);
+    void constrained_delaunay_triangulation(const MatrixXd &V, 
+                                            const MatrixXi &C, 
+                                            MatrixXi &F);
 
-  	void contruct_tree(MatrixXd V, 
-  					   Node* node,
-                       MatrixXd projectV);
+  	void contruct_tree(const MatrixXd &V, 
+  					           Node* node,
+                       MatrixXd &projectV);
 
     void add_constrained(MatrixXd V, 
                          MatrixXi C, 
@@ -33,22 +33,22 @@ namespace igl
     void delaunay_triangulation(MatrixXd V, 
     							Node* node);
 
-    void subdivide(RowVectorXi index, 
+    void subdivide(VectorXi index, 
     			   Node* node);
 
     double angle(RowVectorXd p1, 
     			 RowVectorXd p2, 
     			 RowVectorXd p3);
 
-    bool intersect(RowVector3d p1, 
-    			   RowVector3d p2, 
-    			   RowVector3d p3, 
-    			   RowVector3d p4);
+    bool intersect(const RowVectorXd &p1, 
+                   const RowVectorXd &p2, 
+                   const RowVectorXd &p3, 
+                   const RowVectorXd &p4);
 
-    void get_circle_center(RowVector3d p1, 
-    					   RowVector3d p2, 
-    					   RowVector3d p3, 
-    					   RowVector3d center);
+    void get_circle_center(const RowVectorXd &p1, 
+                           const RowVectorXd &p2, 
+                           const RowVectorXd &p3, 
+                           RowVectorXd &center);
 
     double dmnop(RowVector3d m, 
     		  RowVector3d n, 

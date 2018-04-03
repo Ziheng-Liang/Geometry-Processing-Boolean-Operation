@@ -1,7 +1,9 @@
 #ifndef IGL_BOL_Polygon_H
 #define IGL_BOL_Polygon_H
+
 #include <Eigen/Dense>
 #include <vector>
+
 
 namespace igl
 {
@@ -15,7 +17,7 @@ namespace igl
             std::vector<int> adjacent_index; 
         };
 
-        void split (Polygon* ab, Polygon* a, Polygon* b, std::tuple<int,int> new_edge) {
+        inline void split (Polygon* ab, Polygon* a, Polygon* b, std::tuple<int,int> new_edge) {
             int idx1=-1, idx2=-1;
         	for (int i = 0; i < ab->size; i++) {
                 int current = ab->vertex(i);
@@ -69,7 +71,7 @@ namespace igl
             }
         }
 
-        void merge (Polygon* a, Polygon* b, Polygon* ab) {
+        inline void merge (Polygon* a, Polygon* b, Polygon* ab) {
             int idx1, idx2;
             for (int i = 0; i < a->size; i++) {
                 if (a->adjacent_polygon.at(i) == b) {
@@ -108,7 +110,7 @@ namespace igl
         }
 
 
-        int find_vertex(Polygon* p, int index) {
+        inline int find_vertex(Polygon* p, int index) {
             for (int i = 0; i < p->size; i++) {
                 if (p->vertex(i) == index) {
                     return i;
@@ -116,7 +118,7 @@ namespace igl
             }
             return -1;
         }
-        int exist_edges(Polygon* p, int i, int j) {
+        inline int exist_edges(Polygon* p, int i, int j) {
             for (int k = 0; k < p->size - 1; k++) {
                 if ((p->vertex(k) == i && p->vertex(k+1) == j) ||
                     (p->vertex(k) == j && p->vertex(k+1) == i)) {
