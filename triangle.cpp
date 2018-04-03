@@ -211,7 +211,7 @@ std::vector<RowVector3r> igl::bol::ls2ls_intersection(const RowVector3r &a0, con
 	} else { // if they are not parallel. find the intersection, and check if the point is inside of two line segment
 		RowVector3r intersect_point; 
 		l2l_intersection(a0, da, b0, db, intersect_point);
-		std::cout << intersect_point << std::endl;
+		//std::cout << intersect_point << std::endl;
 		bool p_ina = p_lies_ls(intersect_point, a0, a1);
 		bool p_inb = p_lies_ls(intersect_point, b0, b1);
 		if (p_ina && p_inb){
@@ -223,16 +223,6 @@ std::vector<RowVector3r> igl::bol::ls2ls_intersection(const RowVector3r &a0, con
 	}
 	//Here should have capture all the cases.
 	assert(false);
-}
-
-
-
-
-
-
-//For solving 2x2 system of linear equaltions
-static void solve2x2(rat a0, rat a1, rat a2, rat a3, rat b1, rat b2){
-
 }
 
 
@@ -459,6 +449,7 @@ std::vector<RowVector3r> igl::bol::t2t_intersect(const Matrix33r & A, const Matr
 			t2plane_intersect_line(B, sdB2A, O, ld, pB0, pB1, tB0, tB1);
 			// std::cout << "zeros:" << num_sd_B2A0 << " " << num_sd_A2B0 << std::endl; 
 			std::cout << pB0 << " " << pB1 << " " << pA0 << " " << pA1 << std::endl; 
+			std::cout << "t:" << tA0 << " "<<tA1 << " "<<tB0 << " "<<tB1 <<std::endl;
 			if (tA0 > tB1 || tA1 < tB0){ //no intersection
 				return return_v;
 			} 
@@ -473,12 +464,9 @@ std::vector<RowVector3r> igl::bol::t2t_intersect(const Matrix33r & A, const Matr
 			} else {
 				return_v.push_back(pA1);
 			}
-
-
-
 		}
 
 	}
-
+	return return_v;
 
 }
