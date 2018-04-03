@@ -107,8 +107,8 @@ static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1,
 	//Line 2: = x2 + s * d2
 	//Solve this linear equation (over determined)
 	//We know its on the same plane before hand, therefore we just need two axis
-	std::cout << "l1: " << d1 << " x1: " << x1 << std::endl;
-	std::cout << "l2: " << d2 << " x2: " << x2 << std::endl; 
+	// std::cout << "l1: " << d1 << " x1: " << x1 << std::endl;
+	// std::cout << "l2: " << d2 << " x2: " << x2 << std::endl; 
 
 	for (int i = 0; i < 3; i++){
 		int a0 = i;
@@ -125,11 +125,11 @@ static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1,
 			right.resize(2,1);
 			right(0,0) = x2(0,a0) - x1(0,a0);
 			right(1,0) = x2(0,a1) - x1(0,a1);
-			std::cout << "KK" << std::endl;
+			//std::cout << "KK" << std::endl;
 			auto ts = left.inverse() * right;
 			auto t = ts(0,0);
 			p = x1 + t * d1;
-			std::cout << "K" << std::endl;
+			//std::cout << "K" << std::endl;
 
 		}
 
@@ -274,14 +274,31 @@ static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, c
 		RowVector3r a0 = A.row(i);
 		RowVector3r a1 = A.row((i+1)%3);
 		for (int j = 0; j < 3; j++){
-			RowVector3r b0 = B.row(i);
-			RowVector3r b1 = B.row((i+1)%3);
+			RowVector3r b0 = B.row(j);
+			RowVector3r b1 = B.row((j+1)%3);
 			auto intersections = ls2ls_intersection(a0, a1, b0, b1);
+			// std::cout << "Points" << std::endl;
+			// for (int k = 0; k < intersections.size(); k ++){
+			// 	std::cout << intersections[k] << std::endl;
+			// }
 			if (intersections.size() != 0) no_intersection = false;
 			intersect_points[i][j] = intersections;
 		}
 
 	}
+	// std::cout << "intersections point" << std::endl;
+	// for (int i =0; i<intersect_points.size(); i++){
+	// 	std::cout <<"Each in A:";
+	// 	auto each = intersect_points[i];
+	// 	for (int j = 0; j < each.size(); j++){
+	// 		auto ps = each[j];
+	// 		std::cout << "Each in B: ";
+	// 		for (int k = 0; k < ps.size(); k++){
+	// 			std::cout << ps[k] <<std::endl;
+	// 		}
+			
+	// 	}
+	// }
 
 	if (no_intersection && no_point_inside){ //No overlapping area
 		return return_v;
@@ -340,6 +357,7 @@ static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, c
 			}
 		}
 	}
+	return return_v;
 }
 
 
