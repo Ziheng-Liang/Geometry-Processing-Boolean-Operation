@@ -54,6 +54,10 @@ namespace igl
     		  RowVector3d n, 
     		  RowVector3d o, 
     		  RowVector3d p);
+
+    bool colinear(const RowVectorXd &p1, 
+                  const RowVectorXd &p2, 
+                  const RowVectorXd &p3);
   }
 }
 

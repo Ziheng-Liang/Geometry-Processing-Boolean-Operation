@@ -74,6 +74,7 @@ namespace igl
         inline void merge (Polygon* a, Polygon* b, Polygon* ab) {
             int idx1, idx2;
             std::cout << "merge test1" << std::endl;
+            std::cout << a->size << std::endl;
             std::cout << a->adjacent_polygon.size() << std::endl;
             for (int i = 0; i < a->size; i++) {
                 if (a->adjacent_polygon.at(i) == b) {
@@ -132,7 +133,7 @@ namespace igl
             for (int k = 0; k < p->size - 1; k++) {
                 if ((p->vertex(k) == i && p->vertex(k+1) == j) ||
                     (p->vertex(k) == j && p->vertex(k+1) == i)) {
-                    return i;
+                    return k;
                 }
             }
             return -1;
