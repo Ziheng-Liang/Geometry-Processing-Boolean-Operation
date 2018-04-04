@@ -43,7 +43,7 @@ static int find_non_zero(rat d[3]){
 
 //Find a point from intersection of two plane
 static void find_point_from_two_plane(const RowVector3r & n1, const rat & d1, 
-	const RowVector3r & n2, const rat & d2, RowVector3r p){
+	const RowVector3r & n2, const rat & d2, RowVector3r & p){
 	//
 	for (int i = 0; i < 3; i++){
 		int a0 = i;
@@ -378,12 +378,14 @@ static void t2plane_intersect_line(const Matrix33r & A, rat sd[3], const RowVect
 
 
 	if (num_sd_0 == 2){
+		std::cout << "this2" << std::endl;
 		int v = find_non_zero(sd);
 		int v1 = (v+1)%3;
 		int v2 = (v+2)%3;
 		p0 = A.row(v1);
 		p1 = A.row(v2);
 	} else if (num_sd_0 == 1){
+		std::cout << "this1" << std::endl;
 		int v0 = find_zero(sd);
 		int v1 = (v0+1)%3;
 		int v2 = (v0+2)%3;
@@ -394,12 +396,15 @@ static void t2plane_intersect_line(const Matrix33r & A, rat sd[3], const RowVect
 			p0 = p1 = A.row(v0);	
 		}
 	} else {
+		std::cout << "this" << std::endl;
 		int v0, v1, v2;//v0 is the one that stands out, v1 v2 on opposite side
 		v0 = find_different_sign(sd);
 		v1 = (v0+1)%3;
 		v2 = (v0+2)%3;
 		l2l_intersection(p, d, A.row(v1), A.row(v0) - A.row(v1), p0);
 		l2l_intersection(p, d, A.row(v2), A.row(v0) - A.row(v2), p1);
+		std::cout << "p: "  << p << " d: "  << d << std::endl;
+		std::cout << "this" << p0 << "|"<< p1 <<std::endl;
 		
 	}
 	t0 = point_on_line(p0, p, d);
@@ -432,7 +437,7 @@ inline std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix3
 
 
 	RowVector3r nB = (B.row(1) - B.row(0)).cross(B.row(2) - B.row(0));
-	rat dB = -nB.dot(A.row(0));
+	rat dB = -nB.dot(B.row(0));
 	rat sdA2B[3];
 	for (int i = 0; i < 3; i++){
 		sdA2B[i] = nB.dot(A.row(i)) + dB;
@@ -496,6 +501,14 @@ inline std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix3
 	return return_v;
 
 }
+
+	inline Eigen::RowVector3d rat_to_double(RowVector3r &to_cast){
+		Eigen::RowVector3d r;
+		for (int i = 0; i < to_cast.size(); i++){
+			r(i) = static_cast<double>(to_cast(i));
+		}
+		return r;
+	}
 
 
 }
