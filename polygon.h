@@ -130,9 +130,9 @@ namespace igl
             return -1;
         }
         inline int exist_edges(Polygon* p, int i, int j) {
-            for (int k = 0; k < p->size - 1; k++) {
-                if ((p->vertex(k) == i && p->vertex(k+1) == j) ||
-                    (p->vertex(k) == j && p->vertex(k+1) == i)) {
+            for (int k = 0; k < p->size; k++) {
+                if ((p->vertex(k) == i && p->vertex((k+1)%p->size) == j) ||
+                    (p->vertex(k) == j && p->vertex((k+1)%p->size) == i)) {
                     return k;
                 }
             }

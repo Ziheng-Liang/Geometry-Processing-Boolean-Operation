@@ -14,6 +14,30 @@ void igl::bol::constrained_delaunay_triangulation(const Eigen::MatrixXd &V, cons
 	MatrixXd projectV;
 	contruct_tree(V, root, projectV);
 	delaunay_triangulation(projectV, root);
+	for (int i = 0; i < root->polygons.size(); i++) {
+		cout << "polygons i:" << endl;
+		cout << root->polygons.at(i)->vertex << endl;
+		cout << "adj:" << endl;
+		if (root->polygons.at(i)->adjacent_polygon.at(0)){
+			cout << root->polygons.at(i)->adjacent_polygon.at(0)->vertex << endl;
+		}
+		else {
+			cout << "NULL" << endl;
+		}
+		if (root->polygons.at(i)->adjacent_polygon.at(1)){
+			cout << root->polygons.at(i)->adjacent_polygon.at(1)->vertex << endl;
+		}
+		else {
+			cout << "NULL" << endl;
+		}
+		if (root->polygons.at(i)->adjacent_polygon.at(2)){
+			cout << root->polygons.at(i)->adjacent_polygon.at(2)->vertex << endl;
+		}
+		else {
+			cout << "NULL" << endl;
+		}
+
+	}
 	add_constrained(projectV, C, root);
 	F = Eigen::MatrixXi::Zero(root->polygons.size(), 3);
 	for (int i = 0; i < F.rows(); i++) {
@@ -38,6 +62,9 @@ void igl::bol::contruct_tree(const MatrixXd &V, Node* node, MatrixXd &projectV) 
 	projectV = V * piA;
 	MatrixXd temp;
 	MatrixXi xindex;
+	projectV = MatrixXd::Zero(V.rows(), 2);
+	projectV.col(0) = V.col(0);
+	projectV.col(1) = V.col(1);
 	igl::sort(projectV, 1, true, temp, xindex);
 	cout << projectV << endl;
 	subdivide(xindex.col(0), node);
@@ -76,7 +103,6 @@ void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vect
 	for (int i = 0; i < polygons.size(); i++) {
 		// find polygon that contains one point of the constrain
 		vidx1 = find_vertex(polygons.at(i), C(0));
-		cout << vidx1 << endl;
 		if (vidx1 != -1) {
 			// check if any edge intersect the constrain edge
 			for (int j = 1; j < polygons.at(i)->size; j++) {
@@ -102,7 +128,6 @@ void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vect
 			}
 		}		
 		vidx2 = find_vertex(polygons.at(i), C(1));
-		cout << vidx2 << endl;
 		if (vidx2 != -1) {
 			for (int j = 1; j < polygons.at(i)->size; j++) {
 				cout << "WHY" << endl;
@@ -110,15 +135,20 @@ void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vect
 				cout << C(1) << endl;
 				cout << polygons.at(i)->vertex(j-1) << endl;
 				cout << polygons.at(i)->vertex(j) << endl;
+				cout << intersect(V.row(C(0)), V.row(C(1)), 
+							  V.row(polygons.at(i)->vertex(j-1)), 
+							  V.row(polygons.at(i)->vertex(j))) << endl;
 				if (intersect(V.row(C(0)), V.row(C(1)), 
 							  V.row(polygons.at(i)->vertex(j-1)), 
 							  V.row(polygons.at(i)->vertex(j)))) {
 					intersection = true;
+					cout << "next assigned" << endl;
 					next = polygons.at(i)->adjacent_polygon.at(j);
 					break;
 				}
 			}
 			if (intersection) {
+				cout << "start assigned" << endl;
 				start = polygons.at(i);
 				break;
 			}
@@ -133,6 +163,10 @@ void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vect
 	if (!start && !next) {
 		return;
 	}
+	cout << "start" << endl;
+		cout << start->vertex << endl;
+	cout << "next" << endl;
+		cout << next->vertex << endl;
 	polygons.erase(std::remove(polygons.begin(), polygons.end(), start), polygons.end());
 	Polygon* new_polygon = new Polygon();
 	while (vidx1 == -1 || vidx2 == -1) {
@@ -373,16 +407,6 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 			RowVectorXd p_left = V.row(l_ridx);
 			RowVectorXd p_right = V.row(r_ridx);
 			RowVectorXd center;
-				cout << "r_candidate" << endl;
-			for (int i = 0; i < r_candidate.size(); i++) {
-				cout << get<0>(r_candidate.at(i)) << endl;
-				cout << get<1>(r_candidate.at(i)) << endl;
-			}
-				cout << "l_candidate" << endl;
-			for (int i = 0; i < l_candidate.size(); i++) {
-				cout << get<0>(l_candidate.at(i)) << endl;
-				cout << get<1>(l_candidate.at(i)) << endl;
-			}
 
 			l_candidate_final = -1;
 			r_candidate_final = -1;
@@ -392,14 +416,6 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 					break;
 				}
 				get_circle_center(p_left, p_right, V.row(get<0>(r_candidate.at(i))), center);
-				cout << "circle" << endl;
-				cout << l_ridx << endl;
-				cout << r_ridx << endl;
-				cout << get<0>(r_candidate.at(i)) << endl;
-				cout << center << endl;
-				cout << (p_left-center).dot(p_left-center) << endl;
-				cout << (V.row(get<0>(r_candidate.at(i+1))) - center)
-					.dot(V.row(get<0>(r_candidate.at(i+1))) - center) << endl;
 				// if next candidate is outside, this is the final candidate
 				if ((p_left-center).dot(p_left-center) <= (V.row(get<0>(r_candidate.at(i+1))) - center)
 					.dot(V.row(get<0>(r_candidate.at(i+1))) - center)) {
@@ -422,11 +438,6 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 					break;
 				}
 				get_circle_center(p_left, p_right, V.row(get<0>(l_candidate.at(i))), center);
-				cout << "circle" << endl;
-				cout << l_ridx << endl;
-				cout << r_ridx << endl;
-				cout << get<0>(l_candidate.at(i)) << endl;
-				cout << center << endl;
 				if ((p_left-center).dot(p_left-center) <= (V.row(get<0>(l_candidate.at(i+1))) - center)
 					.dot(V.row(get<0>(l_candidate.at(i+1))) - center)) {
 					l_candidate_final = get<0>(l_candidate.at(i));
@@ -469,6 +480,10 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 			else {
 				break;
 			}
+			cout << "final_r" << endl;
+			cout << r_ridx << endl;
+			cout << "final_l" << endl;
+			cout << l_ridx << endl;
 
 			Polygon* new_polygon = new Polygon();
 			new_polygon->size = 3;
@@ -498,6 +513,8 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 					int oppo_idx = exist_edges(node->right->polygons.at(i), 
 											   new_polygon->vertex(2), 
 											   new_polygon->vertex(0));
+					cout << "oppo_idx" << endl;
+					cout << oppo_idx << endl;
 					if (oppo_idx != -1) {
 						new_polygon->adjacent_polygon.push_back(node->right->polygons.at(i));
 						new_polygon->adjacent_index.push_back(oppo_idx);
@@ -509,7 +526,6 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 					new_polygon->adjacent_polygon.push_back(NULL);
 					new_polygon->adjacent_index.push_back(NULL);
 				}
-
 			}
 			else {
 				new_polygon->vertex(2) = get<0>(new_edges.at(new_edges.size()-1));
@@ -538,7 +554,6 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 																			  new_polygon->vertex(0)));
 				}
 				else {
-		
 					new_polygon->adjacent_polygon.push_back(NULL);
 					new_polygon->adjacent_index.push_back(NULL);
 				}
@@ -546,13 +561,12 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 
 
 			if (new_polygon->adjacent_polygon.size() >= 2 && new_polygon->adjacent_polygon.at(1)) {
-	
 				new_polygon->adjacent_polygon.at(1)->adjacent_index.at(new_polygon->adjacent_index.at(1)) = 1;
+				new_polygon->adjacent_polygon.at(1)->adjacent_polygon.at(new_polygon->adjacent_index.at(1)) = new_polygon;
 			}
 			if (new_polygon->adjacent_polygon.size() >= 3 && new_polygon->adjacent_polygon.at(2)) {
-	
-	
 				new_polygon->adjacent_polygon.at(2)->adjacent_index.at(new_polygon->adjacent_index.at(2)) = 2;
+				new_polygon->adjacent_polygon.at(2)->adjacent_polygon.at(new_polygon->adjacent_index.at(2)) = new_polygon;
 			}
 
 			new_edges.push_back(make_tuple(l_ridx, r_ridx));
