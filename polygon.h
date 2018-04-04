@@ -3,7 +3,7 @@
 
 #include <Eigen/Dense>
 #include <vector>
-
+#include <iostream>
 
 namespace igl
 {
@@ -73,6 +73,9 @@ namespace igl
 
         inline void merge (Polygon* a, Polygon* b, Polygon* ab) {
             int idx1, idx2;
+            std::cout << "merge test1" << std::endl;
+            std::cout << a->size << std::endl;
+            std::cout << a->adjacent_polygon.size() << std::endl;
             for (int i = 0; i < a->size; i++) {
                 if (a->adjacent_polygon.at(i) == b) {
                     idx1 = i;
@@ -85,28 +88,36 @@ namespace igl
                     break;
                 }
             }
+            std::cout << "merge test2" << std::endl;
             assert(idx1!=-1);
             assert(idx2!=-1);
             ab->size = a->size + b->size - 2;
+            std::cout << ab->size << std::endl;
             ab->vertex = Eigen::VectorXi::Zero(ab->size);
+            std::cout << "merge test2.1" << std::endl;
             for (int i = 0; i < ab->size; i++) {
                 if (i < idx1) {
+                    std::cout << "merge test2.2" << std::endl;
                     ab->vertex(i) = a->vertex(i); 
                     ab->adjacent_polygon.push_back(a->adjacent_polygon.at(i));
                     ab->adjacent_index.push_back(a->adjacent_index.at(i));
                 }
                 else if (i <= idx1 + b->size - 1) {
+                    std::cout << "merge test2.3" << std::endl;
                     ab->vertex(i) = b->vertex((i - idx1 + idx2 + 1)%b->size);
                     ab->adjacent_polygon.push_back(a->adjacent_polygon.at((i - idx1 + idx2 + 1)%b->size));
                     ab->adjacent_index.push_back(a->adjacent_index.at((i - idx1 + idx2 + 1)%b->size));
                 }
                 else {
+                    std::cout << "merge test2.4" << std::endl;
                     ab->vertex(i) = a->vertex(i + 1 - b->size);
                     ab->adjacent_polygon.push_back(a->adjacent_polygon.at(i + 1 - b->size));
                     ab->adjacent_index.push_back(a->adjacent_index.at(i));
                 }
                 ab->adjacent_polygon.at(i)->adjacent_index.at(ab->adjacent_index.at(i))= i;
             }
+
+            std::cout << "merge test3" << std::endl;
         }
 
 
@@ -119,10 +130,10 @@ namespace igl
             return -1;
         }
         inline int exist_edges(Polygon* p, int i, int j) {
-            for (int k = 0; k < p->size - 1; k++) {
-                if ((p->vertex(k) == i && p->vertex(k+1) == j) ||
-                    (p->vertex(k) == j && p->vertex(k+1) == i)) {
-                    return i;
+            for (int k = 0; k < p->size; k++) {
+                if ((p->vertex(k) == i && p->vertex((k+1)%p->size) == j) ||
+                    (p->vertex(k) == j && p->vertex((k+1)%p->size) == i)) {
+                    return k;
                 }
             }
             return -1;
