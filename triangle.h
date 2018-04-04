@@ -7,13 +7,19 @@
 namespace igl {
 	namespace bol{
 		//Check if a triagnle is degenerate or not
-		bool is_degenerate(Matrix33r V);
+		inline bool is_degenerate(Matrix33r V);
 
 		//Intersect triangle A and B
-		std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix33r & B);
+		inline std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix33r & B);
+		//Intersection of two line segment
+		inline std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const RowVector3r &a1, 
+			const RowVector3r &b0, const RowVector3r &b1);
 	}
 }
 
+#ifndef IGL_STATIC_LIBRARY
+#  include "triangle.cpp"
+#endif
 
 
 #endif

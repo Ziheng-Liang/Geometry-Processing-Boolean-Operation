@@ -2,12 +2,16 @@
 #include <vector>
 #include <iostream>
 #include <array>
-using namespace igl::bol;
-bool igl::bol::is_degenerate(Matrix33r V){
-	// return (V.row(0).array() == V.row(1).array() ||
-	// 		V.row(0).array() == V.row(1).array() ||
-	// 		V.row(1).array() == V.row(2).array());
-	return false;
+
+namespace igl{
+namespace bol{
+
+
+inline bool is_degenerate(Matrix33r V){
+	RowVector3r a  = V.row(1) - V.row(0);
+	RowVector3r b = V.row(2) - V.row(0);
+
+	return (a.cross(b).array() == 0).all();
 }
 
 static bool vectors_equal(const RowVector3r & a, const RowVector3r & b){
@@ -95,7 +99,7 @@ static bool p_lies_ls(const RowVector3r &p, const RowVector3r &a, const RowVecto
 	for (int i = 0; i < 3; i++){
 		if (p(0, i) < min_coord[i] || p(0,i) > max_coord[i]) return false; 
 	}
-	return 0;
+	return true;
 
 }
 
@@ -107,14 +111,14 @@ static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1,
 	//Line 2: = x2 + s * d2
 	//Solve this linear equation (over determined)
 	//We know its on the same plane before hand, therefore we just need two axis
-	std::cout << "l1: " << d1 << " x1: " << x1 << std::endl;
-	std::cout << "l2: " << d2 << " x2: " << x2 << std::endl; 
+	// std::cout << "l1: " << d1 << " x1: " << x1 << std::endl;
+	// std::cout << "l2: " << d2 << " x2: " << x2 << std::endl; 
 
 	for (int i = 0; i < 3; i++){
 		int a0 = i;
 		int a1 = (i+1)%3;
 		int a2 = (i+2)%3;
-		if (d1(a0) * (-d2(a1)) - d1(a0) * (-d2(a1)) != 0) { //if it is invertible
+		if (d1(a0) * (-d2(a1)) - d1(a1) * (-d2(a0)) != 0) { //if it is invertible
 			MatrixXr left;
 			left.resize(2,2);
 			left(0,0) = d1(0,a0);
@@ -125,11 +129,11 @@ static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1,
 			right.resize(2,1);
 			right(0,0) = x2(0,a0) - x1(0,a0);
 			right(1,0) = x2(0,a1) - x1(0,a1);
-			std::cout << "KK" << std::endl;
+			//std::cout << "KK" << std::endl;
 			auto ts = left.inverse() * right;
 			auto t = ts(0,0);
 			p = x1 + t * d1;
-			std::cout << "K" << std::endl;
+			//std::cout << "K" << std::endl;
 
 		}
 
@@ -141,8 +145,8 @@ static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1,
 
 //Find the intersection of two line segment a0-a1 and b0-b1
 //Precondition: two line segment coplanar, a0, a1 not the same point, b0 b1 not the same point
-static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const RowVector3r &a1, 
-	const RowVector3r &b0, const RowVector3r &b1){
+inline std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const RowVector3r &a1, 
+			const RowVector3r &b0, const RowVector3r &b1){
 	assert(!(a0.array() == a1.array()).all());
 	assert(!(b0.array() == b1.array()).all());
 	
@@ -156,6 +160,7 @@ static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const 
 	if ((cdadb.array() == 0).all() ){ //da cross db = 0, da db are paralell
 		RowVector3r dc = a1 - b0;
 		RowVector3r cdcdb = dc.cross(db);
+
 		if ((cdcdb.array() == 0).all()){ //if they are collinear
 			//We have 4 case
 			bool b0_ina = p_lies_ls(b0, a0, a1);
@@ -165,6 +170,7 @@ static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const 
 			//case 3: 0 point in b lies in a0-a1, 
 				//subcase 1: 0 point of a lies in b0-b1, no intersection
 				//subcase 2: 2 points of a lies in b0-b1, intersection is a0a1
+
 			if (b0_ina && !b1_ina){
 				rat dotb1b0 = (a1 - a0).dot(b1 - a0);
 				if (dotb1b0 > 0){		//a0-b0-a1-b1//
@@ -209,6 +215,7 @@ static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const 
 	} else { // if they are not parallel. find the intersection, and check if the point is inside of two line segment
 		RowVector3r intersect_point; 
 		l2l_intersection(a0, da, b0, db, intersect_point);
+		//std::cout << intersect_point << std::endl;
 		bool p_ina = p_lies_ls(intersect_point, a0, a1);
 		bool p_inb = p_lies_ls(intersect_point, b0, b1);
 		if (p_ina && p_inb){
@@ -220,16 +227,6 @@ static std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const 
 	}
 	//Here should have capture all the cases.
 	assert(false);
-}
-
-
-
-
-
-
-//For solving 2x2 system of linear equaltions
-static void solve2x2(rat a0, rat a1, rat a2, rat a3, rat b1, rat b2){
-
 }
 
 
@@ -281,13 +278,30 @@ static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, c
 		RowVector3r a0 = A.row(i);
 		RowVector3r a1 = A.row((i+1)%3);
 		for (int j = 0; j < 3; j++){
-			RowVector3r b0 = B.row(i);
-			RowVector3r b1 = B.row((i+1)%3);
+			RowVector3r b0 = B.row(j);
+			RowVector3r b1 = B.row((j+1)%3);
 			auto intersections = ls2ls_intersection(a0, a1, b0, b1);
+			// std::cout << "Points" << std::endl;
+			// for (int k = 0; k < intersections.size(); k ++){
+			// 	std::cout << intersections[k] << std::endl;
+			// }
 			if (intersections.size() != 0) no_intersection = false;
 			intersect_points[i][j] = intersections;
 		}
 
+	}
+	std::cout << "intersections point" << std::endl;
+	for (int i =0; i<intersect_points.size(); i++){
+		std::cout <<"Each in A:";
+		auto each = intersect_points[i];
+		for (int j = 0; j < each.size(); j++){
+			auto ps = each[j];
+			std::cout << "Each in B: ";
+			for (int k = 0; k < ps.size(); k++){
+				std::cout << ps[k] <<std::endl;
+			}
+			
+		}
 	}
 
 	if (no_intersection && no_point_inside){ //No overlapping area
@@ -298,7 +312,6 @@ static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, c
 	//Here it could add potentially two duplicate point
 	for (int t = 0; t < 2; t++){
 		const Matrix33r & cur_triangle = (t == 0) ? A : B;
-
 
 		for (int i = 0; i < 3; i++){
 			if (vint[t][i] && vint[t][(i+1)%3]){ //If both vertex is inside
@@ -347,6 +360,9 @@ static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, c
 			}
 		}
 	}
+
+
+	return return_v;
 }
 
 
@@ -402,7 +418,7 @@ static void t2plane_intersect_line(const Matrix33r & A, rat sd[3], const RowVect
 
 //https://www.tandfonline.com/doi/pdf/10.1080/10867651.1997.10487472?needAccess=true
 //A : 3 x 3, each row represents the vectics 
-std::vector<RowVector3r> igl::bol::t2t_intersect(const Matrix33r & A, const Matrix33r & B){
+inline std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix33r & B){
 	assert(!is_degenerate(A));
 	assert(!is_degenerate(B));
 
@@ -428,7 +444,10 @@ std::vector<RowVector3r> igl::bol::t2t_intersect(const Matrix33r & A, const Matr
 	std::vector<RowVector3r> return_v;
 
 	if (sdB2A[0] == 0 && sdB2A[1] == 0 && sdB2A[2] == 0){ //coplanar
-		return coplanar_t2t_intersection(A, B);
+		
+		auto result = coplanar_t2t_intersection(A, B);
+		std::cout << result.size() << "kk" << std::endl;
+		return result;
 	} else {
 		if ((sdB2A[0] > 0 && sdB2A[1] > 0 && sdB2A[2] > 0) 
 			|| (sdB2A[0] < 0 && sdB2A[1] < 0 && sdB2A[2] < 0)){//no intersection
@@ -456,6 +475,7 @@ std::vector<RowVector3r> igl::bol::t2t_intersect(const Matrix33r & A, const Matr
 			t2plane_intersect_line(B, sdB2A, O, ld, pB0, pB1, tB0, tB1);
 			// std::cout << "zeros:" << num_sd_B2A0 << " " << num_sd_A2B0 << std::endl; 
 			std::cout << pB0 << " " << pB1 << " " << pA0 << " " << pA1 << std::endl; 
+			std::cout << "t:" << tA0 << " "<<tA1 << " "<<tB0 << " "<<tB1 <<std::endl;
 			if (tA0 > tB1 || tA1 < tB0){ //no intersection
 				return return_v;
 			} 
@@ -470,12 +490,13 @@ std::vector<RowVector3r> igl::bol::t2t_intersect(const Matrix33r & A, const Matr
 			} else {
 				return_v.push_back(pA1);
 			}
-
-
-
 		}
 
 	}
+	return return_v;
+
+}
 
 
+}
 }
