@@ -4,16 +4,15 @@ LIBIGLPATH = ~/lib/libigl/include/
 BOOSTPATH = ~/lib/
 
 
-INCLUDE = -I $(EIGENPATH) -I $(LIBIGLPATH) -I $(BOOSTPATH)
+INCLUDE = -I $(EIGENPATH) -I $(LIBIGLPATH) -I $(BOOSTPATH) -I ./include
 CFLAGS = -std=c++11 $(INCLUDE)
 LDFLAGS = -lpthread
 
 %.o : %.cpp
 	$(CC) $(CFLAGS) -c $< -o $@ $(LDFLAGS)
  
-main: main.cpp boost_include.h triangle.o constrained_delaunay_triangulation.o
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
-	
+main: main.cpp
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
 clean: 
 	rm ./main 

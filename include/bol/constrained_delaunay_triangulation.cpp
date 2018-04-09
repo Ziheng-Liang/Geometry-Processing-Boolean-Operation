@@ -9,7 +9,7 @@ using namespace igl::bol;
 using namespace Eigen;
 using namespace std;
 
-void igl::bol::constrained_delaunay_triangulation(const Eigen::MatrixXd &V, const Eigen::MatrixXi &C, Eigen::MatrixXi & F) {
+inline void igl::bol::constrained_delaunay_triangulation(const Eigen::MatrixXd &V, const Eigen::MatrixXi &C, Eigen::MatrixXi & F) {
 	Node* root = new Node();
 	MatrixXd projectV;
 	contruct_tree(V, root, projectV);
@@ -24,7 +24,7 @@ void igl::bol::constrained_delaunay_triangulation(const Eigen::MatrixXd &V, cons
 	igl::unique_simplices(FF, F);
 }
 
-void igl::bol::contruct_tree(const MatrixXd &V, Node* node, MatrixXd &projectV) {
+inline void igl::bol::contruct_tree(const MatrixXd &V, Node* node, MatrixXd &projectV) {
 	assert (V.rows() >= 3);
 	RowVector3d p1 = V.row(0);
 	RowVector3d p2 = V.row(1);
@@ -46,7 +46,7 @@ void igl::bol::contruct_tree(const MatrixXd &V, Node* node, MatrixXd &projectV) 
 	subdivide(xindex.col(0), node);
 }
 
-void igl::bol::subdivide(Eigen::VectorXi index, Node* node) {
+inline void igl::bol::subdivide(Eigen::VectorXi index, Node* node) {
 	node->index = index;
 	int n = index.rows();
 	node->size = n;
@@ -62,13 +62,13 @@ void igl::bol::subdivide(Eigen::VectorXi index, Node* node) {
 	subdivide(index.tail(n-n/2), right_node);
 }
 
-void igl::bol::add_constrained(Eigen::MatrixXd V, Eigen::MatrixXi C, Node* node) {
+inline void igl::bol::add_constrained(Eigen::MatrixXd V, Eigen::MatrixXi C, Node* node) {
 	for (int i = 0; i < C.rows(); i++) {
 		break_polygons(V, C.row(i), node->polygons, node->index);
 	}
 }
 
-void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vector<Polygon*> polygons, Eigen::RowVectorXi index) {
+inline void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vector<Polygon*> polygons, Eigen::RowVectorXi index) {
 	int vidx1 = -1, vidx2 = -1;
 	Polygon *start;
 	Polygon *next;
@@ -175,7 +175,7 @@ void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vect
 }
 
 
-void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
+inline void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 	if (node->left) {
 		assert(node->right);
 	}
@@ -564,7 +564,7 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 
 // }
 
-double igl::bol::angle(RowVectorXd p1, RowVectorXd p2, RowVectorXd p3) {
+inline double igl::bol::angle(RowVectorXd p1, RowVectorXd p2, RowVectorXd p3) {
 	double Dir_C_to_A = atan2(p2(1) - p1(1), p2(0)- p1(0));
 	double Dir_C_to_B = atan2(p3(1) - p1(1), p3(0)- p1(0));
 	double Angle_ACB = Dir_C_to_A - Dir_C_to_B;
@@ -589,7 +589,7 @@ double igl::bol::angle(RowVectorXd p1, RowVectorXd p2, RowVectorXd p3) {
 // 	return (v1.cross(v2)).dot(p3 - p1) == 0;
 // }
 
-bool igl::bol::intersect(const RowVectorXd &p1, const RowVectorXd &p2, const RowVectorXd &p3, const RowVectorXd &p4) {
+inline bool igl::bol::intersect(const RowVectorXd &p1, const RowVectorXd &p2, const RowVectorXd &p3, const RowVectorXd &p4) {
 	assert(p1.cols() == 2);
 	if (p1==p3 || p1==p4 || p2==p3 || p2==p4) {
 		return false;
@@ -623,11 +623,11 @@ bool igl::bol::intersect(const RowVectorXd &p1, const RowVectorXd &p2, const Row
 // 	center << x, y;
 // }
 
-bool igl::bol::colinear(const RowVectorXd &p1, const RowVectorXd &p2, const RowVectorXd &p3)  {
+inline bool igl::bol::colinear(const RowVectorXd &p1, const RowVectorXd &p2, const RowVectorXd &p3)  {
 	return abs(p1(0) * (p2(1) - p3(1)) + p2(0) * (p3(1) - p1(1)) + p3(0) * (p1(1) - p2(1))) < 1e-10;
 }
 
-void igl::bol::get_circle_center(const RowVectorXd &p1, const RowVectorXd &p2, const RowVectorXd &p3, RowVectorXd &center) {
+inline void igl::bol::get_circle_center(const RowVectorXd &p1, const RowVectorXd &p2, const RowVectorXd &p3, RowVectorXd &center) {
 	RowVectorXd a = (p1 + p2)/2;
 	RowVectorXd b = (p2 + p3)/2;
 	RowVectorXd c(2);

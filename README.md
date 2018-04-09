@@ -10,7 +10,7 @@ A toolkit for some basics operations used in mesh boolean operation
 Triangle triangle intersection:
 ```
 #include <Eigen/Dense>
-#include <triangle.h>
+#include <bol/triangle.h>
 #include <iostream>
 #include <vector>
 int main()
