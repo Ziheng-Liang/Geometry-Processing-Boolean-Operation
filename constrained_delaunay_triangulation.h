@@ -12,6 +12,7 @@ namespace igl
   {
     using namespace Eigen;
     using namespace std;
+    
     void constrained_delaunay_triangulation(const MatrixXd &V, 
                                             const MatrixXi &C, 
                                             MatrixXi &F);
