@@ -1,8 +1,9 @@
 #include "triangle.h"
 #include <vector>
-#include <iostream>
 #include <array>
-
+#include <utility>
+#include <algorithm>
+#include <set>
 namespace igl{
 namespace bol{
 
@@ -13,6 +14,7 @@ inline bool is_degenerate(Matrix33r V){
 
 	return (a.cross(b).array() == 0).all();
 }
+
 
 static bool vectors_equal(const RowVector3r & a, const RowVector3r & b){
 	return (a.array() == b.array()).all();
@@ -111,8 +113,6 @@ static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1,
 	//Line 2: = x2 + s * d2
 	//Solve this linear equation (over determined)
 	//We know its on the same plane before hand, therefore we just need two axis
-	// std::cout << "l1: " << d1 << " x1: " << x1 << std::endl;
-	// std::cout << "l2: " << d2 << " x2: " << x2 << std::endl; 
 
 	for (int i = 0; i < 3; i++){
 		int a0 = i;
@@ -129,17 +129,23 @@ static void l2l_intersection(const RowVector3r &x1, const RowVector3r &d1,
 			right.resize(2,1);
 			right(0,0) = x2(0,a0) - x1(0,a0);
 			right(1,0) = x2(0,a1) - x1(0,a1);
-			//std::cout << "KK" << std::endl;
+
 			auto ts = left.inverse() * right;
 			auto t = ts(0,0);
 			p = x1 + t * d1;
-			//std::cout << "K" << std::endl;
 
 		}
 
 
 	}
 
+}
+
+static bool points_colinear(const RowVector3r & a, const RowVector3r & b, const RowVector3r & c){
+	RowVector3r d1 = a - b;
+	RowVector3r d2 = c - b;
+	RowVector3r crossprod =  d1.cross(d2);
+	return (crossprod.array() == 0).all();
 }
 
 
@@ -215,7 +221,6 @@ inline std::vector<RowVector3r> ls2ls_intersection(const RowVector3r &a0, const 
 	} else { // if they are not parallel. find the intersection, and check if the point is inside of two line segment
 		RowVector3r intersect_point; 
 		l2l_intersection(a0, da, b0, db, intersect_point);
-		//std::cout << intersect_point << std::endl;
 		bool p_ina = p_lies_ls(intersect_point, a0, a1);
 		bool p_inb = p_lies_ls(intersect_point, b0, b1);
 		if (p_ina && p_inb){
@@ -256,8 +261,10 @@ static bool point_in_triangle(const RowVector3r & q, const Matrix33r & A){
 }
 
 
+
+
 //Return the list of segments
-static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, const Matrix33r & B){
+static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, const Matrix33r & B, bool subdivide_edges){
 
 	std::vector<RowVector3r> return_v;
 	//Array of bool to check if a point is in triangle or not
@@ -281,24 +288,18 @@ static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, c
 			RowVector3r b0 = B.row(j);
 			RowVector3r b1 = B.row((j+1)%3);
 			auto intersections = ls2ls_intersection(a0, a1, b0, b1);
-			// std::cout << "Points" << std::endl;
 			// for (int k = 0; k < intersections.size(); k ++){
-			// 	std::cout << intersections[k] << std::endl;
 			// }
 			if (intersections.size() != 0) no_intersection = false;
 			intersect_points[i][j] = intersections;
 		}
 
 	}
-	std::cout << "intersections point" << std::endl;
 	for (int i =0; i<intersect_points.size(); i++){
-		std::cout <<"Each in A:";
 		auto each = intersect_points[i];
 		for (int j = 0; j < each.size(); j++){
 			auto ps = each[j];
-			std::cout << "Each in B: ";
 			for (int k = 0; k < ps.size(); k++){
-				std::cout << ps[k] <<std::endl;
 			}
 			
 		}
@@ -327,10 +328,15 @@ static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, c
 					if (intersect_points[m][n].size()==1 && !vectors_equal(intersect_points[m][n][0], cur_triangle.row(i))){
 						return_v.push_back(intersect_points[m][n][0]);
 						vertex_added = true;
+						break;
 					}
 				}
 				if (!vertex_added){
 					return_v.push_back(cur_triangle.row(i));
+				}
+				if (subdivide_edges){
+					return_v.push_back(return_v[return_v.size() - 1]);
+					return_v.push_back(cur_triangle.row((i+1)%3));
 				}
 			} else if (vint[t][(i+1)%3]){ // if other vertex is inside
 				return_v.push_back(cur_triangle.row((i+1)%3));
@@ -342,19 +348,45 @@ static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, c
 					if (intersect_points[m][n].size()==1 && !vectors_equal(intersect_points[m][n][0], cur_triangle.row((i+1)%3))){
 						return_v.push_back(intersect_points[m][n][0]);
 						vertex_added = true;
+						break;
 					}
 				}
 				if (!vertex_added){
 					return_v.push_back(cur_triangle.row((i+1)%3));
 				}
+				if (subdivide_edges){
+					return_v.push_back(return_v[return_v.size() - 1]);
+					return_v.push_back(cur_triangle.row(i));
+				}
 			} else {
-				bool is_colinear = false;
+				int num_intersection = 0;
 				for(int j = 0; j < 3; j++){
 					int m, n;
 					m = (t == 0) ? i : j;
 					n = (t == 0) ? j : i;
 					if (intersect_points[m][n].size()==1){ 
 						return_v.push_back(intersect_points[m][n][0]);
+						num_intersection++;
+					}
+				}
+				if (subdivide_edges){
+					if (num_intersection == 0){
+						return_v.push_back(cur_triangle.row(i));
+						return_v.push_back(cur_triangle.row((i+1)%3));
+					} else {
+						auto first = return_v[return_v.size()-1]; 
+						auto second = return_v[return_v.size()-2];
+						if (p_lies_ls(first, second, cur_triangle.row(i))){ // v--first--second--v
+							return_v.push_back(cur_triangle.row(i));
+							return_v.push_back(first);
+							return_v.push_back(second);
+							return_v.push_back(cur_triangle.row((i+1)%3));
+						} else {											// v--second--first--v
+							return_v.push_back(cur_triangle.row(i));
+							return_v.push_back(second);
+							return_v.push_back(first);
+							return_v.push_back(cur_triangle.row((i+1)%3));
+						}
 					}
 				}
 			}
@@ -365,6 +397,9 @@ static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, c
 	return return_v;
 }
 
+static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, const Matrix33r & B){
+	return coplanar_t2t_intersection(A, B, false);
+}
 
 
 //A helper: Find the intersection of a triangle touches a plane and a line
@@ -378,14 +413,12 @@ static void t2plane_intersect_line(const Matrix33r & A, rat sd[3], const RowVect
 
 
 	if (num_sd_0 == 2){
-		std::cout << "this2" << std::endl;
 		int v = find_non_zero(sd);
 		int v1 = (v+1)%3;
 		int v2 = (v+2)%3;
 		p0 = A.row(v1);
 		p1 = A.row(v2);
 	} else if (num_sd_0 == 1){
-		std::cout << "this1" << std::endl;
 		int v0 = find_zero(sd);
 		int v1 = (v0+1)%3;
 		int v2 = (v0+2)%3;
@@ -396,15 +429,12 @@ static void t2plane_intersect_line(const Matrix33r & A, rat sd[3], const RowVect
 			p0 = p1 = A.row(v0);	
 		}
 	} else {
-		std::cout << "this" << std::endl;
 		int v0, v1, v2;//v0 is the one that stands out, v1 v2 on opposite side
 		v0 = find_different_sign(sd);
 		v1 = (v0+1)%3;
 		v2 = (v0+2)%3;
 		l2l_intersection(p, d, A.row(v1), A.row(v0) - A.row(v1), p0);
 		l2l_intersection(p, d, A.row(v2), A.row(v0) - A.row(v2), p1);
-		std::cout << "p: "  << p << " d: "  << d << std::endl;
-		std::cout << "this" << p0 << "|"<< p1 <<std::endl;
 		
 	}
 	t0 = point_on_line(p0, p, d);
@@ -423,7 +453,8 @@ static void t2plane_intersect_line(const Matrix33r & A, rat sd[3], const RowVect
 
 //https://www.tandfonline.com/doi/pdf/10.1080/10867651.1997.10487472?needAccess=true
 //A : 3 x 3, each row represents the vectics 
-inline std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix33r & B){
+//subdived edges: try to subdive edges along the way. only apply to A if not coplanar
+inline std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix33r & B, bool subdivide_edges){
 	assert(!is_degenerate(A));
 	assert(!is_degenerate(B));
 
@@ -444,14 +475,10 @@ inline std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix3
 	}
 
 
-	std::cout << nA << std::endl;
-	std::cout << nB << std::endl;
 	std::vector<RowVector3r> return_v;
 
 	if (sdB2A[0] == 0 && sdB2A[1] == 0 && sdB2A[2] == 0){ //coplanar
-		
-		auto result = coplanar_t2t_intersection(A, B);
-		std::cout << result.size() << "kk" << std::endl;
+		auto result = coplanar_t2t_intersection(A, B, subdivide_edges);
 		return result;
 	} else {
 		if ((sdB2A[0] > 0 && sdB2A[1] > 0 && sdB2A[2] > 0) 
@@ -468,7 +495,6 @@ inline std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix3
 			RowVector3r O;
 			find_point_from_two_plane(nA, dA, nB, dB, O);
 
-			std::cout << "Here" << ld << std::endl;
 			//Do interval test on A0
 			rat tA0, tA1;
 			RowVector3r pA0, pA1;
@@ -478,9 +504,6 @@ inline std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix3
 			rat tB0, tB1;
 			RowVector3r pB0, pB1;
 			t2plane_intersect_line(B, sdB2A, O, ld, pB0, pB1, tB0, tB1);
-			// std::cout << "zeros:" << num_sd_B2A0 << " " << num_sd_A2B0 << std::endl; 
-			std::cout << pB0 << " " << pB1 << " " << pA0 << " " << pA1 << std::endl; 
-			std::cout << "t:" << tA0 << " "<<tA1 << " "<<tB0 << " "<<tB1 <<std::endl;
 			if (tA0 > tB1 || tA1 < tB0){ //no intersection
 				return return_v;
 			} 
@@ -495,6 +518,42 @@ inline std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix3
 			} else {
 				return_v.push_back(pA1);
 			}
+
+			if (subdivide_edges){
+				auto first = return_v[0];
+				auto second = return_v[1];
+				for (int i = 0; i < 3; i++){
+					bool first_colinear = points_colinear(first, A.row(i), A.row((i+1)%3));
+					bool second_colinear = points_colinear(second, A.row(i), A.row((i+1)%3));
+					if (!first_colinear && ! second_colinear){
+						return_v.push_back(A.row(i));
+						return_v.push_back(A.row((i+1)%3));
+					} else if (first_colinear && second_colinear){
+						if (p_lies_ls(first,  A.row(i), second)){ // v--first--second--v
+							return_v.push_back(A.row(i));
+							return_v.push_back(first);
+							return_v.push_back(second);
+							return_v.push_back(A.row((i+1)%3));
+						} else {
+							return_v.push_back(A.row(i));
+							return_v.push_back(second);
+							return_v.push_back(first);
+							return_v.push_back(A.row((i+1)%3));
+						}
+					} else if (first_colinear && !second_colinear){
+						return_v.push_back(A.row(i));
+						return_v.push_back(first);
+						return_v.push_back(first);
+						return_v.push_back(A.row((i+1)%3));
+					} else if (second_colinear && !first_colinear){
+						return_v.push_back(A.row(i));
+						return_v.push_back(second);
+						return_v.push_back(second);
+						return_v.push_back(A.row((i+1)%3));
+					}
+				}
+
+			}
 		}
 
 	}
@@ -502,14 +561,88 @@ inline std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix3
 
 }
 
-	inline Eigen::RowVector3d rat_to_double(RowVector3r &to_cast){
-		Eigen::RowVector3d r;
-		for (int i = 0; i < to_cast.size(); i++){
-			r(i) = static_cast<double>(to_cast(i));
+
+inline std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix33r & B){
+	return t2t_intersect(A, B, false);
+}
+
+
+
+inline Eigen::RowVector3d rat_to_double(RowVector3r &to_cast){
+	Eigen::RowVector3d r;
+	for (int i = 0; i < to_cast.size(); i++){
+		r(i) = static_cast<double>(to_cast(i));
+	}
+	return r;
+}
+
+static int find_first_rowvector(const std::vector<RowVector3r> & v, const RowVector3r & q){
+	for (int i = 0; i < v.size(); i++){
+		if (vectors_equal(v[i], q)){
+			return i;
 		}
-		return r;
+	}
+	return -1;
+}
+
+
+static bool compare_int_pair(const std::pair<int, int> & p1, const std::pair<int, int> & p2){
+	return (p1.first == p2.first && p1.second == p2.second) || (p1.first == p2.second && p1.second == p2.first);
+}
+
+
+inline void t2t_intersect_on_A(const Matrix33r & A, const Matrix33r & B, MatrixXr & AV, Eigen::MatrixXi & AF){
+	std::vector<RowVector3r> list_of_ls = t2t_intersect(A, B);
+	std::vector<RowVector3r> list_of_v;
+
+	//insert all vertices in A
+	list_of_v.push_back(A.row(0));
+	list_of_v.push_back(A.row(1));
+	list_of_v.push_back(A.row(2));
+
+
+	std::set<std::pair<int, int>, bool(*)(const std::pair<int,int> &p1, 
+                           const std::pair<int,int> &p)> set_of_c(&compare_int_pair);
+
+	for (int i = 0; i < list_of_ls.size()/2; i++){
+		auto first_v = list_of_ls[i*2];
+		auto second_v = list_of_ls[i*2+1];
+
+		int first_index = find_first_rowvector(list_of_v, first_v);
+		int second_index = find_first_rowvector(list_of_v, second_v);
+
+		if (first_index == -1) {
+			list_of_v.push_back(first_v);
+			first_index = list_of_v.size() - 1;
+		}
+
+		if (second_index == -1) {
+			list_of_v.push_back(second_v);
+			second_index = list_of_v.size() - 1;
+		}
+		if (vectors_equal(first_v, second_v)){ // if two points are the same, we dont need constraints
+		} else {//append this relation to set_of_c
+			set_of_c.insert(std::make_pair(first_index, second_index));
+		}
 	}
 
 
+
+	AV.resize(list_of_v.size(),3);
+	AF.resize(set_of_c.size(),2);
+
+	for(int i = 0; i < list_of_v.size(); i++){
+		AV.row(i) = list_of_v[i];
+	}
+
+	int index = 0;
+	for (auto&& c_pair :set_of_c){
+		AF(index, 0) = c_pair.first;
+		AF(index, 1) = c_pair.second;
+		index++;
+	}
+
 }
-}
+
+}}
+
