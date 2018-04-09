@@ -12,8 +12,10 @@ namespace igl {
 		//Intersect triangle A and B
 		inline std::vector<RowVector3r> t2t_intersect(const Matrix33r & A, const Matrix33r & B);
 
+		//Get the subdivided lines segments on A
 		inline void t2t_intersect_on_A(const Matrix33r & A, const Matrix33r & B, MatrixXr & AV, Eigen::MatrixXi & AF);
 
+		//Cast a rational point to double point
 		inline Eigen::RowVector3d rat_to_double(RowVector3r & to_cast);
 
 	}
