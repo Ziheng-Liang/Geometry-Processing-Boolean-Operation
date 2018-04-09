@@ -15,26 +15,26 @@ void igl::bol::constrained_delaunay_triangulation(const Eigen::MatrixXd &V, cons
 	contruct_tree(V, root, projectV);
 	delaunay_triangulation(projectV, root);
 	for (int i = 0; i < root->polygons.size(); i++) {
-		cout << "polygons i:" << endl;
-		cout << root->polygons.at(i)->vertex << endl;
-		cout << "adj:" << endl;
+		// cout << "polygons i:" << endl;
+		// cout << root->polygons.at(i)->vertex << endl;
+		// cout << "adj:" << endl;
 		if (root->polygons.at(i)->adjacent_polygon.at(0)){
-			cout << root->polygons.at(i)->adjacent_polygon.at(0)->vertex << endl;
+			// cout << root->polygons.at(i)->adjacent_polygon.at(0)->vertex << endl;
 		}
 		else {
-			cout << "NULL" << endl;
+			// cout << "NULL" << endl;
 		}
 		if (root->polygons.at(i)->adjacent_polygon.at(1)){
-			cout << root->polygons.at(i)->adjacent_polygon.at(1)->vertex << endl;
+			// cout << root->polygons.at(i)->adjacent_polygon.at(1)->vertex << endl;
 		}
 		else {
-			cout << "NULL" << endl;
+			// cout << "NULL" << endl;
 		}
 		if (root->polygons.at(i)->adjacent_polygon.at(2)){
-			cout << root->polygons.at(i)->adjacent_polygon.at(2)->vertex << endl;
+			// cout << root->polygons.at(i)->adjacent_polygon.at(2)->vertex << endl;
 		}
 		else {
-			cout << "NULL" << endl;
+			// cout << "NULL" << endl;
 		}
 
 	}
@@ -66,7 +66,7 @@ void igl::bol::contruct_tree(const MatrixXd &V, Node* node, MatrixXd &projectV) 
 	projectV.col(0) = V.col(0);
 	projectV.col(1) = V.col(1);
 	igl::sort(projectV, 1, true, temp, xindex);
-	cout << projectV << endl;
+	// cout << projectV << endl;
 	subdivide(xindex.col(0), node);
 }
 
@@ -98,7 +98,7 @@ void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vect
 	Polygon *next;
 	bool intersection = false;
 
-	cout << "hi" << endl;
+	// cout << "hi" << endl;
 	// loop through all polygons
 	for (int i = 0; i < polygons.size(); i++) {
 		// find polygon that contains one point of the constrain
@@ -106,14 +106,6 @@ void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vect
 		if (vidx1 != -1) {
 			// check if any edge intersect the constrain edge
 			for (int j = 1; j < polygons.at(i)->size; j++) {
-				cout << "WHY" << endl;
-				cout << C(0) << endl;
-				cout << C(1) << endl;
-				cout << polygons.at(i)->vertex(j-1) << endl;
-				cout << polygons.at(i)->vertex(j) << endl;
-				cout << intersect(V.row(C(0)), V.row(C(1)), 
-							  V.row(polygons.at(i)->vertex(j-1)), 
-							  V.row(polygons.at(i)->vertex(j))) << endl;
 				if (intersect(V.row(C(0)), V.row(C(1)), 
 							  V.row(polygons.at(i)->vertex(j-1)), 
 							  V.row(polygons.at(i)->vertex(j)))) {
@@ -130,77 +122,110 @@ void igl::bol::break_polygons(Eigen::MatrixXd V, Eigen::RowVectorXi C, std::vect
 		vidx2 = find_vertex(polygons.at(i), C(1));
 		if (vidx2 != -1) {
 			for (int j = 1; j < polygons.at(i)->size; j++) {
-				cout << "WHY" << endl;
-				cout << C(0) << endl;
-				cout << C(1) << endl;
-				cout << polygons.at(i)->vertex(j-1) << endl;
-				cout << polygons.at(i)->vertex(j) << endl;
-				cout << intersect(V.row(C(0)), V.row(C(1)), 
-							  V.row(polygons.at(i)->vertex(j-1)), 
-							  V.row(polygons.at(i)->vertex(j))) << endl;
 				if (intersect(V.row(C(0)), V.row(C(1)), 
 							  V.row(polygons.at(i)->vertex(j-1)), 
 							  V.row(polygons.at(i)->vertex(j)))) {
 					intersection = true;
-					cout << "next assigned" << endl;
+					// cout << "next assigned" << endl;
 					next = polygons.at(i)->adjacent_polygon.at(j);
 					break;
 				}
 			}
 			if (intersection) {
-				cout << "start assigned" << endl;
+				// cout << "start assigned" << endl;
 				start = polygons.at(i);
 				break;
 			}
 		}
 	}
-	if (start) {
-		
-	}
-	if (next) {
-		
-	}
 	if (!start && !next) {
 		return;
 	}
-	cout << "start" << endl;
-		cout << start->vertex << endl;
-	cout << "next" << endl;
-		cout << next->vertex << endl;
+	// cout << "start" << endl;
+	// cout << start->vertex << endl;
+	// cout << "next" << endl;
+	// cout << next->vertex << endl;
 	polygons.erase(std::remove(polygons.begin(), polygons.end(), start), polygons.end());
+	// cout << "???" << endl;
 	Polygon* new_polygon = new Polygon();
-	while (vidx1 == -1 || vidx2 == -1) {
-
+	do {
 		merge(start, next, new_polygon);
+		// cout << new_polygon->vertex << endl;
+		for (int j = 0; j < new_polygon->size; j ++) {
+			// cout << "j: " << j << endl;
+			if (new_polygon->adjacent_polygon.at(j)){
+				// cout << new_polygon->adjacent_polygon.at(j)->vertex << endl;
+			}
+			else {
+				// cout << "NULL" << endl;
+			}
+		}
 
 		polygons.erase(std::remove(polygons.begin(), polygons.end(), next), polygons.end());
-		for (int j = 0; j < new_polygon->size - 1; j++) {
+		for (int j = 0; j < new_polygon->size; j++) {
 			if (intersect(V.row(C(0)), V.row(C(1)), 
 						  V.row(new_polygon->vertex(j)), 
-						  V.row(new_polygon->vertex(j+1)))) {
+						  V.row(new_polygon->vertex((j+1)%new_polygon->size)))) {
 				next = new_polygon->adjacent_polygon.at(j);
 				start = new_polygon;
 				break;
 			}
 		}
-		if (vidx1 == -1) {
-			vidx1 = find_vertex(start, C(0));
+
+		// if both edge are inside vertex, done
+		vidx1 = find_vertex(new_polygon, C(0));
+		vidx2 = find_vertex(new_polygon, C(1));
+		// cout << "new_polygon" << endl;
+		// cout << new_polygon->vertex << endl;
+		if (vidx1==-1 || vidx2==-1) {
+			new_polygon = new Polygon();
 		}
-		if (vidx2 == -1) {
-			vidx2 = find_vertex(start, C(1));
-		}
-	}
+	}while ((vidx1 == -1 || vidx2 == -1));
+	Polygon *a = new Polygon();
+	Polygon *b = new Polygon();
+	// cout << "split" << endl;
+	split(new_polygon, a, b, C(0), C(1));
+	// cout << "split end" << endl;
 
 	MatrixXi xindex;
-	MatrixXd sub_V;
-	VectorXi cols;
-	igl::colon(0,V.cols()-1, cols);
-	igl::slice(V,new_polygon->vertex,cols,sub_V);
-	igl::slice(index,new_polygon->vertex,cols,xindex);
+	MatrixXi temp;
+	igl::sort(a->vertex, 1, true, temp, xindex);
+	// cout << "xindex" << endl;
+	// cout << temp << endl;
+	// cout << "xindexend" << endl;
+	// igl::slice(V,node->left->index,cols,left_sub_V);
+	// igl::slice(V,node->right->index,cols,right_sub_V);
+
 	Node* node = new Node();
-	subdivide(xindex, node);
-	delaunay_triangulation(sub_V, node);
+	// cout << "test1" << endl;
+	subdivide(temp, node);
+	// cout << "test2" << endl;
+	delaunay_triangulation(V, node);
+	// cout << "test3" << endl;
 	polygons.insert(polygons.end(), node->polygons.begin(), node->polygons.end());
+
+	igl::sort(b->vertex, 1, true, temp, xindex);
+	// cout << "xindex" << endl;
+	// cout << temp << endl;
+	// cout << "xindexend" << endl;
+	// igl::slice(V,node->left->index,cols,left_sub_V);
+	// igl::slice(V,node->right->index,cols,right_sub_V);
+
+	node = new Node();
+	// cout << "test1" << endl;
+	subdivide(temp, node);
+	// cout << "test2" << endl;
+	delaunay_triangulation(V, node);
+	// cout << "test3" << endl;
+	polygons.insert(polygons.end(), node->polygons.begin(), node->polygons.end());
+	MatrixXi F = Eigen::MatrixXi::Zero(polygons.size(), 3);
+	for (int i = 0; i < F.rows(); i++) {
+		F(i, 0) = polygons.at(i)->vertex(0);
+		F(i, 1) = polygons.at(i)->vertex(1);
+		F(i, 2) = polygons.at(i)->vertex(2);
+	}
+	cout << "hey" << endl;
+	cout << F << endl;
 }
 
 
@@ -246,12 +271,16 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 	else {
 		delaunay_triangulation(V, node->left);
 		delaunay_triangulation(V, node->right);
-		cout << node->index << endl;
+		// cout << node->index << endl;
 		// get partial Vs
 		MatrixXd left_sub_V;
 		MatrixXd right_sub_V;
 		VectorXi cols;
 		igl::colon(0,V.cols()-1, cols);
+		// cout << "hihihi" << endl;
+		// cout << node->left->index << endl;
+		// cout << node->right->index << endl;
+		// cout << V << endl;
 		igl::slice(V,node->left->index,cols,left_sub_V);
 		igl::slice(V,node->right->index,cols,right_sub_V);
 
@@ -449,14 +478,14 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 			
 				}
 			}
-			cout << "l_ridx" << endl;
-			cout << l_ridx << endl;
-			cout << "r_ridx" << endl;
-			cout << r_ridx << endl;
-			cout << "l_candidate_final" << endl;
-			cout << l_candidate_final << endl;
-			cout << "r_candidate_final" << endl;
-			cout << r_candidate_final << endl;
+			// cout << "l_ridx" << endl;
+			// cout << l_ridx << endl;
+			// cout << "r_ridx" << endl;
+			// cout << r_ridx << endl;
+			// cout << "l_candidate_final" << endl;
+			// cout << l_candidate_final << endl;
+			// cout << "r_candidate_final" << endl;
+			// cout << r_candidate_final << endl;
 
 
 
@@ -480,10 +509,10 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 			else {
 				break;
 			}
-			cout << "final_r" << endl;
-			cout << r_ridx << endl;
-			cout << "final_l" << endl;
-			cout << l_ridx << endl;
+			// cout << "final_r" << endl;
+			// cout << r_ridx << endl;
+			// cout << "final_l" << endl;
+			// cout << l_ridx << endl;
 
 			Polygon* new_polygon = new Polygon();
 			new_polygon->size = 3;
@@ -513,8 +542,8 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 					int oppo_idx = exist_edges(node->right->polygons.at(i), 
 											   new_polygon->vertex(2), 
 											   new_polygon->vertex(0));
-					cout << "oppo_idx" << endl;
-					cout << oppo_idx << endl;
+					// cout << "oppo_idx" << endl;
+					// cout << oppo_idx << endl;
 					if (oppo_idx != -1) {
 						new_polygon->adjacent_polygon.push_back(node->right->polygons.at(i));
 						new_polygon->adjacent_index.push_back(oppo_idx);
@@ -592,7 +621,7 @@ void igl::bol::delaunay_triangulation(MatrixXd V, Node* node) {
 			F(i, 1) = node->polygons.at(i)->vertex(1);
 			F(i, 2) = node->polygons.at(i)->vertex(2);
 		}
-		cout << F << endl;
+		// cout << F << endl;
 	}
 
 }
@@ -651,7 +680,7 @@ bool igl::bol::intersect(const RowVectorXd &p1, const RowVectorXd &p2, const Row
 
 	// double r = (d(0) * v2(1) - d(1) * v2(0)) / det;
  //    double s = (v1(0) * d(1) - v1(0) * d(0)) / det;
- //    cout << !(r < 0 || r > 1 || s < 0 || s > 1) << endl;
+    // cout << !(r < 0 || r > 1 || s < 0 || s > 1) << endl;
 	// return !(r < 0 || r > 1 || s < 0 || s > 1);
 	return (((p1(0)-p3(0))*(p4(1)-p3(1)) - (p1(1)-p3(1))*(p4(0)-p3(0)))
             * ((p2(0)-p3(0))*(p4(1)-p3(1)) - (p2(1)-p3(1))*(p4(0)-p3(0))) < 0)
