@@ -6,6 +6,17 @@ A toolkit for some basics operations used in mesh boolean operation
 - [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page)
 - [boost/multiprecision](https://www.boost.org/)
 
+## Get started
+```
+git clone https://github.com/Ziheng-Liang/Geometry-Processing-Boolean-Operation/
+mv MakefileTemplate Makefile
+```
+Modify the Makefile so it gets your dependent library
+```
+make
+./main
+```
+
 ## Example
 Triangle triangle intersection:
 ```
