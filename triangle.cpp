@@ -3,7 +3,7 @@
 #include <array>
 #include <utility>
 #include <algorithm>
-#include <set>
+#include <unordered_set>
 namespace igl{
 namespace bol{
 
@@ -295,15 +295,6 @@ static std::vector<RowVector3r> coplanar_t2t_intersection(const Matrix33r & A, c
 		}
 
 	}
-	for (int i =0; i<intersect_points.size(); i++){
-		auto each = intersect_points[i];
-		for (int j = 0; j < each.size(); j++){
-			auto ps = each[j];
-			for (int k = 0; k < ps.size(); k++){
-			}
-			
-		}
-	}
 
 	if (no_intersection && no_point_inside){ //No overlapping area
 		return return_v;
@@ -586,13 +577,8 @@ static int find_first_rowvector(const std::vector<RowVector3r> & v, const RowVec
 }
 
 
-static bool compare_int_pair(const std::pair<int, int> & p1, const std::pair<int, int> & p2){
-	return (p1.first == p2.first && p1.second == p2.second) || (p1.first == p2.second && p1.second == p2.first);
-}
-
-
 inline void t2t_intersect_on_A(const Matrix33r & A, const Matrix33r & B, MatrixXr & AV, Eigen::MatrixXi & AF){
-	std::vector<RowVector3r> list_of_ls = t2t_intersect(A, B);
+	std::vector<RowVector3r> list_of_ls = t2t_intersect(A, B, true);
 	std::vector<RowVector3r> list_of_v;
 
 	//insert all vertices in A
@@ -600,9 +586,15 @@ inline void t2t_intersect_on_A(const Matrix33r & A, const Matrix33r & B, MatrixX
 	list_of_v.push_back(A.row(1));
 	list_of_v.push_back(A.row(2));
 
+	auto hash=[](const std::pair<int, int>& p){
+	    return p.first + p.second;
+	};
 
-	std::set<std::pair<int, int>, bool(*)(const std::pair<int,int> &p1, 
-                           const std::pair<int,int> &p)> set_of_c(&compare_int_pair);
+	auto equal=[](const std::pair<int, int> & p1, const std::pair<int, int> & p2){
+	    return (p1.first == p2.first && p1.second == p2.second) || (p1.first == p2.second && p1.second == p2.first);
+	};
+
+	std::unordered_set<std::pair<int, int>, decltype(hash), decltype(equal)> set_of_c(0, hash, equal);
 
 	for (int i = 0; i < list_of_ls.size()/2; i++){
 		auto first_v = list_of_ls[i*2];
@@ -630,7 +622,6 @@ inline void t2t_intersect_on_A(const Matrix33r & A, const Matrix33r & B, MatrixX
 
 	AV.resize(list_of_v.size(),3);
 	AF.resize(set_of_c.size(),2);
-
 	for(int i = 0; i < list_of_v.size(); i++){
 		AV.row(i) = list_of_v[i];
 	}
